@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ job.job_name }} — Web Scraper — IntelliHub AI{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <a href="{% url 'scraper:home' %}" style="color:var(--accent-cyan);text-decoration:none;font-size:14px;display:inline-flex;align-items:center;gap:6px;margin-bottom:20px;">
+        <i class="fas fa-arrow-left"></i> Back to Scraper
+    </a>
+
+    <div class="page-header">
+        <div>
+            <h1 class="page-title gradient-text">{{ job.job_name }}</h1>
+            <p style="color:var(--text-secondary);margin-top:4px;">
+                <a href="{{ job.url }}" target="_blank" style="color:var(--accent-cyan);text-decoration:none;">{{ job.url|truncatechars:80 }} <i class="fas fa-external-link-alt" style="font-size:11px;"></i></a>
+            </p>
+        </div>
+        <div style="display:flex;gap:12px;">
+            {% if job.status == 'done' %}
+            <a href="{% url 'scraper:download' job.pk %}" class="btn-glow" style="padding:10px 20px;font-size:14px;">
+                <i class="fas fa-download" style="margin-right:6px;"></i>Download CSV
+            </a>
+            {% endif %}
+            <form method="post" action="{% url 'scraper:delete' job.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn-danger" style="padding:10px 20px;font-size:14px;" onclick="return confirm('Delete?')">
+                    <i class="fas fa-trash" style="margin-right:6px;"></i>Delete
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Job Info -->
+    <div class="metric-grid" style="margin-bottom:24px;">
+        <div class="glass-card metric-card">
+            <div class="metric-label">Status</div>
+            <div style="margin-top:8px;">
+                {% if job.status == 'done' %}<span class="badge-success" style="font-size:14px;padding:6px 16px;">Done</span>
+                {% elif job.status == 'running' %}<span class="badge-warning" style="font-size:14px;padding:6px 16px;">Running</span>
+                {% elif job.status == 'failed' %}<span class="badge-error" style="font-size:14px;padding:6px 16px;">Failed</span>
+                {% else %}<span class="badge-info" style="font-size:14px;padding:6px 16px;">Pending</span>{% endif %}
+            </div>
+        </div>
+        <div class="glass-card metric-card">
+            <div class="metric-label">Rows Scraped</div>
+            <div class="metric-number" style="color:var(--accent-cyan);">{{ job.rows_scraped }}</div>
+        </div>
+        <div class="glass-card metric-card">
+            <div class="metric-label">Columns</div>
+            <div class="metric-number" style="color:var(--accent-green);">{{ job.columns_scraped }}</div>
+        </div>
+        <div class="glass-card metric-card">
+            <div class="metric-label">Created</div>
+            <div style="color:var(--text-primary);font-size:16px;margin-top:8px;">{{ job.created_at|date:"M d, Y H:i" }}</div>
+        </div>
+    </div>
+
+    {% if job.status == 'failed' %}
+    <div class="glass-card" style="padding:24px;border-left:3px solid #EF4444;">
+        <h3 style="color:#EF4444;margin-bottom:8px;"><i class="fas fa-exclamation-triangle" style="margin-right:8px;"></i>Error</h3>
+        <p style="color:var(--text-secondary);">{{ job.error_message }}</p>
+    </div>
+    {% endif %}
+
+    {% if preview_html %}
+    <div class="glass-card" style="padding:28px;">
+        <h3 style="color:var(--text-primary);font-family:'Space Grotesk',sans-serif;margin-bottom:16px;">
+            <i class="fas fa-table" style="color:var(--accent-purple);margin-right:8px;"></i>Data Preview (First 20 rows)
+        </h3>
+        <div style="overflow-x:auto;">{{ preview_html|safe }}</div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

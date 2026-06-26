@@ -1,0 +1,129 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}500 — Server Error | IntelliHub AI{% endblock %}
+
+{% block body %}
+<style>
+    .error-page {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        z-index: 1;
+        padding: 24px;
+    }
+
+    .error-container {
+        text-align: center;
+        max-width: 520px;
+    }
+
+    .error-logo {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 48px;
+        display: inline-block;
+    }
+
+    .error-code {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 120px;
+        font-weight: 700;
+        line-height: 1;
+        margin-bottom: 16px;
+        background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .error-subtitle {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 28px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 12px;
+    }
+
+    .error-message {
+        font-size: 16px;
+        color: var(--text-secondary);
+        line-height: 1.7;
+        margin-bottom: 40px;
+    }
+
+    .error-actions {
+        display: flex;
+        justify-content: center;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+
+    .error-decoration {
+        position: absolute;
+        width: 300px;
+        height: 300px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(124, 58, 237, 0.08) 0%, transparent 70%);
+        pointer-events: none;
+    }
+
+    .error-decoration-1 {
+        top: 10%;
+        right: 8%;
+        animation: pulse 4s ease-in-out infinite;
+    }
+
+    .error-decoration-2 {
+        bottom: 15%;
+        left: 5%;
+        background: radial-gradient(circle, rgba(239, 68, 68, 0.06) 0%, transparent 70%);
+        animation: pulse 5s ease-in-out infinite 1s;
+    }
+
+    .error-icon {
+        font-size: 48px;
+        color: var(--text-muted);
+        margin-bottom: 24px;
+        display: block;
+        animation: pulse 3s ease-in-out infinite;
+    }
+</style>
+
+<div class="error-page">
+    <div class="error-decoration error-decoration-1"></div>
+    <div class="error-decoration error-decoration-2"></div>
+
+    <div class="error-container">
+        <div class="error-logo">
+            <span class="gradient-text">IntelliHub</span> AI
+        </div>
+
+        <div class="error-icon">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+
+        <div class="error-code">500</div>
+        <h1 class="error-subtitle">Server Error</h1>
+        <p class="error-message">
+            Something went wrong on our end. Please try again later.
+        </p>
+
+        <div class="error-actions">
+            <a href="{% url 'dashboard:home' %}" class="btn-glow">
+                <i class="fas fa-th-large"></i> Go to Dashboard
+            </a>
+            <a href="javascript:history.back()" class="btn-glow-outline">
+                <i class="fas fa-arrow-left"></i> Go Back
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+{% endblock %}

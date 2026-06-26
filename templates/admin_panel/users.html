@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}User Management — IntelliHub AI{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <div class="page-header">
+        <h1 class="page-title gradient-text"><i class="fas fa-users-cog" style="margin-right:12px;"></i>User Management</h1>
+        <a href="{% url 'admin_panel:dashboard' %}" class="btn-glow-outline" style="padding:10px 20px;">
+            <i class="fas fa-arrow-left" style="margin-right:6px;"></i>Back to Admin
+        </a>
+    </div>
+
+    <!-- Search -->
+    <div style="margin-bottom:24px;">
+        <form method="get" style="display:flex;gap:12px;max-width:500px;">
+            <input type="text" name="q" class="form-input" placeholder="Search by username or email..." value="{{ search }}">
+            <button type="submit" class="btn-glow" style="padding:12px 20px;white-space:nowrap;">
+                <i class="fas fa-search"></i>
+            </button>
+        </form>
+    </div>
+
+    <div class="glass-card" style="padding:28px;">
+        {% if users %}
+        <table class="intel-table">
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Full Name</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Joined</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                <tr>
+                    <td style="font-weight:500;color:var(--text-primary);">{{ u.username }}</td>
+                    <td style="color:var(--text-secondary);">{{ u.email }}</td>
+                    <td>{{ u.get_full_name|default:"—" }}</td>
+                    <td>
+                        {% if u.role == 'admin' %}<span class="badge-error">Admin</span>
+                        {% elif u.role == 'researcher' %}<span class="badge-success">Researcher</span>
+                        {% elif u.role == 'data_scientist' %}<span class="badge-info">Data Scientist</span>
+                        {% elif u.role == 'company' %}<span class="badge-warning">Company</span>
+                        {% else %}<span class="badge-info">Student</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if u.is_active %}<span class="badge-success">Active</span>
+                        {% else %}<span class="badge-error">Inactive</span>{% endif %}
+                    </td>
+                    <td style="color:var(--text-secondary);font-size:13px;">{{ u.date_joined|date:"M d, Y" }}</td>
+                    <td><a href="{% url 'admin_panel:user_detail' u.pk %}" class="btn-glow-outline" style="padding:4px 12px;font-size:12px;">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% if users.has_other_pages %}
+        <div style="display:flex;justify-content:center;gap:8px;margin-top:20px;">
+            {% if users.has_previous %}
+            <a href="?page={{ users.previous_page_number }}{% if search %}&q={{ search }}{% endif %}" class="btn-glow-outline" style="padding:6px 14px;font-size:13px;">Previous</a>
+            {% endif %}
+            <span style="padding:6px 14px;color:var(--text-secondary);font-size:13px;">Page {{ users.number }} of {{ users.paginator.num_pages }}</span>
+            {% if users.has_next %}
+            <a href="?page={{ users.next_page_number }}{% if search %}&q={{ search }}{% endif %}" class="btn-glow-outline" style="padding:6px 14px;font-size:13px;">Next</a>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="empty-state">
+            <p style="color:var(--text-secondary);">No users found{% if search %} matching "{{ search }}"{% endif %}.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

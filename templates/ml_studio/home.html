@@ -1,0 +1,466 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}ML Studio — IntelliHub AI{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; flex-wrap: wrap; gap: 16px; }
+    .page-header h1 { font-size: 2rem; }
+
+    /* ── Metrics ── */
+    .ml-metrics {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 16px;
+        margin-bottom: 28px;
+    }
+    .ml-metric {
+        padding: 22px;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+    }
+    .ml-metric-icon {
+        width: 42px; height: 42px;
+        border-radius: 11px;
+        display: flex; align-items: center; justify-content: center;
+        margin: 0 auto 12px;
+        font-size: 18px;
+    }
+    .ml-metric-val {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 1.7rem; font-weight: 700;
+        color: var(--text-primary);
+    }
+    .ml-metric-lbl {
+        font-size: 0.73rem; color: var(--text-muted);
+        text-transform: uppercase; letter-spacing: 0.5px;
+        margin-top: 4px; font-weight: 600;
+    }
+
+    /* ── Training Form ── */
+    .train-card { padding: 28px; margin-bottom: 24px; }
+    .train-title {
+        font-size: 1.1rem; font-weight: 600;
+        display: flex; align-items: center; gap: 8px;
+        margin-bottom: 24px;
+    }
+    .train-title i { color: var(--accent-cyan); }
+
+    .train-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+        margin-bottom: 20px;
+    }
+    .train-full { grid-column: 1 / -1; }
+
+    .features-box {
+        max-height: 200px;
+        overflow-y: auto;
+        padding: 12px;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid var(--card-border);
+        border-radius: 10px;
+    }
+    .feature-check {
+        display: flex; align-items: center; gap: 8px;
+        padding: 6px 0;
+        font-size: 0.88rem;
+        color: var(--text-secondary);
+    }
+    .feature-check input[type="checkbox"] {
+        accent-color: var(--accent-purple);
+        width: 16px; height: 16px;
+    }
+
+    .slider-row {
+        display: flex; align-items: center; gap: 12px;
+    }
+    .slider-row input[type="range"] {
+        flex: 1;
+        accent-color: var(--accent-purple);
+    }
+    .slider-val {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.88rem;
+        color: var(--accent-cyan);
+        min-width: 40px;
+    }
+
+    /* Hyperparams */
+    .hyperparam-section {
+        display: none;
+        padding: 16px;
+        background: rgba(255,255,255,0.02);
+        border: 1px solid var(--card-border);
+        border-radius: 10px;
+        margin-top: 10px;
+    }
+    .hyperparam-section.show { display: block; }
+    .hp-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+
+    /* ── Models Table ── */
+    .models-card { padding: 24px; margin-bottom: 24px; }
+    .table-wrapper { overflow-x: auto; }
+    .btn-sm {
+        padding: 6px 12px;
+        font-size: 0.78rem;
+        border-radius: 8px;
+    }
+    .action-btns {
+        display: flex;
+        gap: 6px;
+    }
+
+    .inline-spinner {
+        display: inline-block; width: 16px; height: 16px;
+        border: 2px solid rgba(255,255,255,0.15);
+        border-top-color: var(--accent-purple);
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+        vertical-align: middle;
+        margin-right: 6px;
+    }
+
+    @media (max-width: 768px) {
+        .train-grid { grid-template-columns: 1fr; }
+        .hp-grid { grid-template-columns: 1fr; }
+        .ml-metrics { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 480px) {
+        .ml-metrics { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="gradient-text">ML Studio</h1>
+</div>
+
+<!-- Metric Cards -->
+<div class="ml-metrics">
+    <div class="glass-card ml-metric">
+        <div class="ml-metric-icon" style="background:rgba(124,58,237,0.12);color:var(--accent-purple);">
+            <i class="fas fa-robot"></i>
+        </div>
+        <div class="ml-metric-val" data-count="{{ total_models|default:'0' }}">{{ total_models|default:"0" }}</div>
+        <div class="ml-metric-lbl">Total Models</div>
+    </div>
+    <div class="glass-card ml-metric">
+        <div class="ml-metric-icon" style="background:rgba(16,185,129,0.12);color:var(--accent-green);">
+            <i class="fas fa-bullseye"></i>
+        </div>
+        <div class="ml-metric-val">{{ best_accuracy|default:"—" }}{% if best_accuracy %}%{% endif %}</div>
+        <div class="ml-metric-lbl">Best Accuracy</div>
+    </div>
+    <div class="glass-card ml-metric">
+        <div class="ml-metric-icon" style="background:rgba(6,182,212,0.12);color:var(--accent-cyan);">
+            <i class="fas fa-chart-line"></i>
+        </div>
+        <div class="ml-metric-val" data-count="{{ total_predictions|default:'0' }}">{{ total_predictions|default:"0" }}</div>
+        <div class="ml-metric-lbl">Total Predictions</div>
+    </div>
+</div>
+
+<!-- Train New Model -->
+<div class="glass-card train-card">
+    <h2 class="train-title"><i class="fas fa-graduation-cap"></i> Train New Model</h2>
+    <form id="trainForm">
+        {% csrf_token %}
+        <div class="train-grid">
+            <div>
+                <label class="form-label" for="trainDataset">Dataset</label>
+                <select id="trainDataset" class="form-select" name="dataset" required>
+                    <option value="">— Select Dataset —</option>
+                    {% for ds in datasets %}
+                    <option value="{{ ds.pk }}">{{ ds.name }} ({{ ds.num_rows }} × {{ ds.num_columns }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="form-label" for="modelType">Model Type</label>
+                <select id="modelType" class="form-select" name="model_type" required>
+                    <optgroup label="Classification">
+                        <option value="logistic_regression">Logistic Regression</option>
+                        <option value="random_forest_clf">Random Forest Classifier</option>
+                        <option value="gradient_boost_clf">Gradient Boosting Classifier</option>
+                        <option value="svm_clf">Support Vector Machine</option>
+                        <option value="knn_clf">K-Nearest Neighbors</option>
+                        <option value="decision_tree_clf">Decision Tree Classifier</option>
+                    </optgroup>
+                    <optgroup label="Regression">
+                        <option value="linear_regression">Linear Regression</option>
+                        <option value="random_forest_reg">Random Forest Regressor</option>
+                        <option value="gradient_boost_reg">Gradient Boosting Regressor</option>
+                        <option value="svr">Support Vector Regressor</option>
+                        <option value="decision_tree_reg">Decision Tree Regressor</option>
+                    </optgroup>
+                </select>
+            </div>
+            <div>
+                <label class="form-label" for="targetCol">Target Column</label>
+                <select id="targetCol" class="form-select" name="target_column" required>
+                    <option value="">— Select dataset first —</option>
+                </select>
+            </div>
+            <div>
+                <label class="form-label">Test Size</label>
+                <div class="slider-row">
+                    <input type="range" id="testSize" name="test_size" min="10" max="50" value="20" step="5">
+                    <span class="slider-val" id="testSizeVal">20%</span>
+                </div>
+            </div>
+            <div class="train-full">
+                <label class="form-label">Feature Columns</label>
+                <div class="features-box" id="featuresBox">
+                    <p style="color:var(--text-muted);font-size:0.85rem;">Select a dataset to see available columns.</p>
+                </div>
+            </div>
+
+            <!-- Hyperparameters -->
+            <div class="train-full">
+                <label class="form-label"><i class="fas fa-sliders-h" style="margin-right:4px;"></i> Hyperparameters</label>
+                <div class="hyperparam-section show" id="hyperparamSection">
+                    <div class="hp-grid" id="hpGrid">
+                        <div>
+                            <label class="form-label" for="hpEstimators">N Estimators</label>
+                            <input type="number" class="form-input" id="hpEstimators" name="n_estimators" value="100" min="10" max="1000">
+                        </div>
+                        <div>
+                            <label class="form-label" for="hpMaxDepth">Max Depth</label>
+                            <input type="number" class="form-input" id="hpMaxDepth" name="max_depth" value="10" min="1" max="100">
+                        </div>
+                        <div>
+                            <label class="form-label" for="hpLearningRate">Learning Rate</label>
+                            <input type="number" class="form-input" id="hpLearningRate" name="learning_rate" value="0.1" min="0.001" max="1" step="0.01">
+                        </div>
+                        <div>
+                            <label class="form-label" for="hpMinSamples">Min Samples Split</label>
+                            <input type="number" class="form-input" id="hpMinSamples" name="min_samples_split" value="2" min="2" max="50">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <button type="submit" class="btn-glow" id="trainBtn">
+            <i class="fas fa-play"></i> Train Model
+        </button>
+    </form>
+</div>
+
+<!-- Trained Models Table -->
+<div class="glass-card models-card">
+    <h2 class="train-title"><i class="fas fa-list"></i> Trained Models</h2>
+    {% if models %}
+    <div class="table-wrapper">
+        <table class="intel-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Dataset</th>
+                    <th>Accuracy / R²</th>
+                    <th>F1 Score</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in models %}
+                <tr>
+                    <td style="font-weight:500;">{{ m.name }}</td>
+                    <td><span class="badge-info">{{ m.get_model_type_display|default:m.model_type }}</span></td>
+                    <td style="color:var(--text-secondary);">{{ m.dataset.name|truncatechars:20 }}</td>
+                    <td style="font-family:'JetBrains Mono',monospace;color:var(--accent-green);">
+                        {% if m.accuracy is not None %}{{ m.accuracy|floatformat:2 }}%{% else %}—{% endif %}
+                    </td>
+                    <td style="font-family:'JetBrains Mono',monospace;">
+                        {% if m.f1_score is not None %}{{ m.f1_score|floatformat:3 }}{% else %}—{% endif %}
+                    </td>
+                    <td>
+                        <div class="action-btns">
+                            <a href="{% url 'ml_studio:detail' pk=m.pk %}" class="btn-glow btn-sm">
+                                <i class="fas fa-eye"></i> View
+                            </a>
+                            <form method="post" action="{% url 'ml_studio:delete' pk=m.pk %}" style="margin:0;"
+                                  onsubmit="return confirm('Delete this model?');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn-danger btn-sm">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state" style="padding:40px 16px;">
+        <i class="fas fa-robot"></i>
+        <h3>No Models Trained Yet</h3>
+        <p>Select a dataset and model type above to train your first ML model.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var datasetSelect = document.getElementById('trainDataset');
+    var targetSelect = document.getElementById('targetCol');
+    var featuresBox = document.getElementById('featuresBox');
+    var testSlider = document.getElementById('testSize');
+    var testSizeVal = document.getElementById('testSizeVal');
+    var trainForm = document.getElementById('trainForm');
+    var trainBtn = document.getElementById('trainBtn');
+
+    /* Column data passed from Django view */
+    var datasetColumns = {};
+    {% for ds in datasets %}
+    datasetColumns[{{ ds.pk }}] = {{ ds.column_names_json|safe|default:"[]" }};
+    {% endfor %}
+
+    testSlider.addEventListener('input', function() {
+        testSizeVal.textContent = this.value + '%';
+    });
+
+    /* Populate columns when dataset is selected */
+    datasetSelect.addEventListener('change', function() {
+        var pk = parseInt(this.value, 10);
+        targetSelect.innerHTML = '<option value="">— Select —</option>';
+        featuresBox.innerHTML = '';
+        if (!pk || !datasetColumns[pk]) {
+            featuresBox.innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem;">Select a dataset first.</p>';
+            return;
+        }
+        var cols = datasetColumns[pk];
+        cols.forEach(function(col) {
+            /* Target dropdown */
+            var opt = document.createElement('option');
+            opt.value = col;
+            opt.textContent = col;
+            targetSelect.appendChild(opt);
+            /* Feature checkboxes */
+            var label = document.createElement('label');
+            label.className = 'feature-check';
+            label.innerHTML = '<input type="checkbox" name="features" value="' + col + '" checked> ' + col;
+            featuresBox.appendChild(label);
+        });
+    });
+
+    /* Uncheck target from features when selected */
+    targetSelect.addEventListener('change', function() {
+        var target = this.value;
+        var checks = featuresBox.querySelectorAll('input[type="checkbox"]');
+        checks.forEach(function(cb) {
+            if (cb.value === target) {
+                cb.checked = false;
+                cb.disabled = true;
+            } else {
+                cb.disabled = false;
+            }
+        });
+    });
+
+    /* Train model via AJAX */
+    trainForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        var formData = new FormData(trainForm);
+        /* Gather checked features */
+        var features = [];
+        featuresBox.querySelectorAll('input[type="checkbox"]:checked').forEach(function(cb) {
+            features.push(cb.value);
+        });
+        if (features.length === 0) {
+            showToast('Please select at least one feature column.', 'warning');
+            return;
+        }
+
+        trainBtn.innerHTML = '<span class="inline-spinner"></span> Training…';
+        trainBtn.disabled = true;
+
+        var payload = {
+            dataset: formData.get('dataset'),
+            model_type: formData.get('model_type'),
+            target_column: formData.get('target_column'),
+            features: features,
+            test_size: parseInt(formData.get('test_size'), 10) / 100,
+            n_estimators: parseInt(formData.get('n_estimators'), 10) || 100,
+            max_depth: parseInt(formData.get('max_depth'), 10) || 10,
+            learning_rate: parseFloat(formData.get('learning_rate')) || 0.1,
+            min_samples_split: parseInt(formData.get('min_samples_split'), 10) || 2
+        };
+
+        fetch('/ml-studio/train/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            trainBtn.innerHTML = '<i class="fas fa-play"></i> Train Model';
+            trainBtn.disabled = false;
+            if (data.success) {
+                showToast('Model trained successfully!', 'success');
+                if (data.redirect) {
+                    setTimeout(function() { window.location = data.redirect; }, 800);
+                } else {
+                    window.location.reload();
+                }
+            } else {
+                showToast(data.error || 'Training failed.', 'error');
+            }
+        })
+        .catch(function(err) {
+            trainBtn.innerHTML = '<i class="fas fa-play"></i> Train Model';
+            trainBtn.disabled = false;
+            console.error('Training error:', err);
+            showToast('Request failed. Please try again.', 'error');
+        });
+    });
+
+    function getCookie(name) {
+        var value = '; ' + document.cookie;
+        var parts = value.split('; ' + name + '=');
+        if (parts.length === 2) return parts.pop().split(';').shift();
+        return '';
+    }
+
+    function showToast(msg, type) {
+        var container = document.getElementById('toastContainer');
+        if (!container) return;
+        var icons = { success: 'fa-check-circle', error: 'fa-times-circle', warning: 'fa-exclamation-triangle', info: 'fa-info-circle' };
+        var toast = document.createElement('div');
+        toast.className = 'toast toast-' + (type || 'info');
+        toast.innerHTML = '<i class="fas ' + (icons[type] || icons.info) + ' toast-icon"></i><span>' + msg + '</span><button class="toast-close" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>';
+        container.appendChild(toast);
+        setTimeout(function() { if (toast.parentElement) toast.remove(); }, 5000);
+    }
+
+    /* Count-up */
+    document.querySelectorAll('[data-count]').forEach(function(el) {
+        var target = parseInt(el.getAttribute('data-count'), 10);
+        if (isNaN(target) || target === 0) return;
+        var current = 0, step = Math.max(1, Math.ceil(target / 30));
+        var t = setInterval(function() {
+            current += step;
+            if (current >= target) { current = target; clearInterval(t); }
+            el.textContent = current.toLocaleString();
+        }, 30);
+    });
+});
+</script>
+{% endblock %}

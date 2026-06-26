@@ -1,0 +1,370 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ dataset.name }} — EDA Studio — IntelliHub AI{% endblock %}
+
+{% block extra_css %}
+<style>
+    .back-link {
+        display: inline-flex; align-items: center; gap: 6px;
+        color: var(--text-muted); font-size: 0.85rem; margin-bottom: 16px;
+        transition: color 0.2s; text-decoration: none;
+    }
+    .back-link:hover { color: var(--text-primary); }
+
+    .eda-header { margin-bottom: 28px; }
+    .eda-header h1 { font-size: 1.75rem; }
+    .eda-header .subtitle { color: var(--text-secondary); font-size: 0.9rem; margin-top: 4px; }
+
+    /* ── Metric Strip ── */
+    .eda-metrics {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 14px;
+        margin-bottom: 24px;
+    }
+    .eda-metric {
+        padding: 18px;
+        text-align: center;
+    }
+    .eda-metric-val {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+    .eda-metric-lbl {
+        font-size: 0.72rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-top: 4px;
+        font-weight: 600;
+    }
+
+    /* ── Chart Builder ── */
+    .builder-card { padding: 24px; margin-bottom: 24px; }
+    .builder-title {
+        font-size: 1.1rem; font-weight: 600;
+        display: flex; align-items: center; gap: 8px;
+        margin-bottom: 20px;
+    }
+    .builder-title i { color: var(--accent-cyan); }
+
+    .chart-type-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 20px;
+    }
+    .chart-type-btn {
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        gap: 4px;
+        width: 80px; height: 68px;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid var(--card-border);
+        border-radius: 10px;
+        color: var(--text-muted);
+        font-size: 0.68rem; font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-family: 'Inter', sans-serif;
+    }
+    .chart-type-btn i { font-size: 20px; }
+    .chart-type-btn:hover {
+        border-color: var(--accent-purple);
+        color: var(--accent-purple);
+        background: rgba(124,58,237,0.06);
+    }
+    .chart-type-btn.active {
+        border-color: var(--accent-purple);
+        background: rgba(124,58,237,0.15);
+        color: var(--accent-purple);
+    }
+
+    .col-selectors {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 14px;
+        margin-bottom: 20px;
+    }
+
+    /* ── Viz card ── */
+    .viz-card { padding: 24px; margin-bottom: 24px; }
+    #plotlyChart { width: 100%; min-height: 420px; }
+    .ai-insight {
+        margin-top: 16px;
+        padding: 14px 18px;
+        background: rgba(124,58,237,0.06);
+        border: 1px solid rgba(124,58,237,0.15);
+        border-radius: 10px;
+        color: var(--text-secondary);
+        font-size: 0.88rem;
+        line-height: 1.6;
+    }
+    .ai-insight i { color: var(--accent-purple); margin-right: 6px; }
+
+    /* ── Stats card ── */
+    .stats-card { padding: 24px; margin-bottom: 24px; }
+    .stats-wrapper { overflow-x: auto; }
+
+    /* ── Loading ── */
+    .chart-loading {
+        display: none;
+        text-align: center;
+        padding: 60px 16px;
+        color: var(--text-muted);
+    }
+    .chart-loading .spinner { width: 32px; height: 32px; margin: 0 auto 10px; }
+
+    @media (max-width: 768px) {
+        .eda-metrics { grid-template-columns: 1fr 1fr; }
+        .col-selectors { grid-template-columns: 1fr 1fr; }
+        .chart-type-btn { width: 64px; height: 56px; font-size: 0.6rem; }
+        .chart-type-btn i { font-size: 16px; }
+    }
+    @media (max-width: 480px) {
+        .eda-metrics { grid-template-columns: 1fr; }
+        .col-selectors { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<a href="{% url 'eda:home' %}" class="back-link">
+    <i class="fas fa-arrow-left"></i> Back to EDA Studio
+</a>
+
+<div class="eda-header">
+    <h1 class="gradient-text">{{ dataset.name }}</h1>
+    <p class="subtitle">Exploratory Data Analysis</p>
+</div>
+
+<!-- Metric Cards -->
+<div class="eda-metrics">
+    <div class="glass-card eda-metric">
+        <div class="eda-metric-val" data-count="{{ num_rows|default:'0' }}">{{ num_rows|default:"0" }}</div>
+        <div class="eda-metric-lbl">Rows</div>
+    </div>
+    <div class="glass-card eda-metric">
+        <div class="eda-metric-val" data-count="{{ num_columns|default:'0' }}">{{ num_columns|default:"0" }}</div>
+        <div class="eda-metric-lbl">Columns</div>
+    </div>
+    <div class="glass-card eda-metric">
+        <div class="eda-metric-val" data-count="{{ num_numeric|default:'0' }}">{{ num_numeric|default:"0" }}</div>
+        <div class="eda-metric-lbl">Numeric</div>
+    </div>
+    <div class="glass-card eda-metric">
+        <div class="eda-metric-val" data-count="{{ num_categorical|default:'0' }}">{{ num_categorical|default:"0" }}</div>
+        <div class="eda-metric-lbl">Categorical</div>
+    </div>
+</div>
+
+<!-- Chart Builder -->
+<div class="glass-card builder-card">
+    <h2 class="builder-title"><i class="fas fa-palette"></i> Chart Builder</h2>
+
+    <!-- Chart type buttons -->
+    <div class="chart-type-grid" id="chartTypeGrid">
+        <button class="chart-type-btn active" data-type="histogram"><i class="fas fa-chart-bar"></i>Histogram</button>
+        <button class="chart-type-btn" data-type="scatter"><i class="fas fa-braille"></i>Scatter</button>
+        <button class="chart-type-btn" data-type="heatmap"><i class="fas fa-th"></i>Heatmap</button>
+        <button class="chart-type-btn" data-type="box"><i class="fas fa-square"></i>Box</button>
+        <button class="chart-type-btn" data-type="violin"><i class="fas fa-water"></i>Violin</button>
+        <button class="chart-type-btn" data-type="bar"><i class="fas fa-chart-bar"></i>Bar</button>
+        <button class="chart-type-btn" data-type="pie"><i class="fas fa-chart-pie"></i>Pie</button>
+        <button class="chart-type-btn" data-type="line"><i class="fas fa-chart-line"></i>Line</button>
+        <button class="chart-type-btn" data-type="treemap"><i class="fas fa-sitemap"></i>Treemap</button>
+        <button class="chart-type-btn" data-type="bubble"><i class="fas fa-circle"></i>Bubble</button>
+    </div>
+
+    <!-- Column selectors -->
+    <div class="col-selectors">
+        <div>
+            <label class="form-label" for="colX">X-Axis Column</label>
+            <select id="colX" class="form-select">
+                <option value="">— Select —</option>
+                {% for col in columns %}
+                <option value="{{ col }}">{{ col }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="form-label" for="colY">Y-Axis Column</label>
+            <select id="colY" class="form-select">
+                <option value="">— Optional —</option>
+                {% for col in columns %}
+                <option value="{{ col }}">{{ col }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="form-label" for="colColor">Color By</label>
+            <select id="colColor" class="form-select">
+                <option value="">— None —</option>
+                {% for col in columns %}
+                <option value="{{ col }}">{{ col }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="form-label" for="colSize">Size By</label>
+            <select id="colSize" class="form-select">
+                <option value="">— None —</option>
+                {% for col in columns %}
+                <option value="{{ col }}">{{ col }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <button class="btn-glow" id="generateChart">
+        <i class="fas fa-play"></i> Generate Chart
+    </button>
+</div>
+
+<!-- Visualization -->
+<div class="glass-card viz-card">
+    <h2 class="builder-title"><i class="fas fa-chart-area"></i> Visualization</h2>
+    <div class="chart-loading" id="chartLoading">
+        <div class="spinner"></div>
+        <p>Generating chart…</p>
+    </div>
+    <div id="plotlyChart">
+        <div class="empty-state" id="chartEmpty">
+            <i class="fas fa-chart-area"></i>
+            <h3>No Chart Yet</h3>
+            <p>Select a chart type and columns above, then click Generate.</p>
+        </div>
+    </div>
+    <div class="ai-insight" id="aiInsight" style="display:none;">
+        <i class="fas fa-robot"></i> <span id="insightText"></span>
+    </div>
+</div>
+
+<!-- Statistics Table -->
+{% if describe_html %}
+<div class="glass-card stats-card">
+    <h2 class="builder-title"><i class="fas fa-table"></i> Descriptive Statistics</h2>
+    <div class="stats-wrapper">
+        {{ describe_html|safe }}
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var chartType = 'histogram';
+    var datasetPk = {{ dataset.pk }};
+
+    /* Chart type selection */
+    var typeBtns = document.querySelectorAll('.chart-type-btn');
+    typeBtns.forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            typeBtns.forEach(function(b) { b.classList.remove('active'); });
+            btn.classList.add('active');
+            chartType = btn.getAttribute('data-type');
+        });
+    });
+
+    /* Generate chart */
+    document.getElementById('generateChart').addEventListener('click', function() {
+        var x = document.getElementById('colX').value;
+        if (!x && chartType !== 'heatmap') {
+            showToast('Please select at least an X-axis column.', 'warning');
+            return;
+        }
+        var params = {
+            chart_type: chartType,
+            x_column: x,
+            y_column: document.getElementById('colY').value,
+            color_column: document.getElementById('colColor').value,
+            size_column: document.getElementById('colSize').value
+        };
+        var loading = document.getElementById('chartLoading');
+        var chartDiv = document.getElementById('plotlyChart');
+        var chartEmpty = document.getElementById('chartEmpty');
+        var insightDiv = document.getElementById('aiInsight');
+
+        if (chartEmpty) chartEmpty.style.display = 'none';
+        loading.style.display = 'block';
+        insightDiv.style.display = 'none';
+
+        fetch('/eda/' + datasetPk + '/chart/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify(params)
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            loading.style.display = 'none';
+            if (data.error) {
+                showToast(data.error, 'error');
+                return;
+            }
+            /* Render Plotly chart */
+            var plotData = data.plot_data || [];
+            var layout = data.layout || {};
+            layout.paper_bgcolor = 'rgba(0,0,0,0)';
+            layout.plot_bgcolor = 'rgba(0,0,0,0)';
+            layout.font = { color: '#94A3B8', family: 'Inter, sans-serif' };
+            layout.xaxis = Object.assign(layout.xaxis || {}, { gridcolor: 'rgba(255,255,255,0.05)' });
+            layout.yaxis = Object.assign(layout.yaxis || {}, { gridcolor: 'rgba(255,255,255,0.05)' });
+            layout.margin = { l: 50, r: 30, t: 40, b: 50 };
+
+            Plotly.newPlot(chartDiv, plotData, layout, { responsive: true, displayModeBar: true });
+
+            /* AI insight */
+            if (data.insight) {
+                document.getElementById('insightText').textContent = data.insight;
+                insightDiv.style.display = 'block';
+            }
+        })
+        .catch(function(err) {
+            loading.style.display = 'none';
+            console.error('Chart generation failed:', err);
+            showToast('Failed to generate chart.', 'error');
+        });
+    });
+
+    function getCookie(name) {
+        var value = '; ' + document.cookie;
+        var parts = value.split('; ' + name + '=');
+        if (parts.length === 2) return parts.pop().split(';').shift();
+        return '';
+    }
+
+    function showToast(msg, type) {
+        var container = document.getElementById('toastContainer');
+        if (!container) return;
+        var icons = { success: 'fa-check-circle', error: 'fa-times-circle', warning: 'fa-exclamation-triangle', info: 'fa-info-circle' };
+        var toast = document.createElement('div');
+        toast.className = 'toast toast-' + (type || 'info');
+        toast.innerHTML = '<i class="fas ' + (icons[type] || icons.info) + ' toast-icon"></i><span>' + msg + '</span><button class="toast-close" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>';
+        container.appendChild(toast);
+        setTimeout(function() { if (toast.parentElement) toast.remove(); }, 5000);
+    }
+
+    /* Count-up animation */
+    document.querySelectorAll('[data-count]').forEach(function(el) {
+        var target = parseInt(el.getAttribute('data-count'), 10);
+        if (isNaN(target) || target === 0) return;
+        var current = 0, step = Math.max(1, Math.ceil(target / 30));
+        var t = setInterval(function() {
+            current += step;
+            if (current >= target) { current = target; clearInterval(t); }
+            el.textContent = current.toLocaleString();
+        }, 30);
+    });
+});
+</script>
+{% endblock %}

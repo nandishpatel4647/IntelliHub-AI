@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Web Scraper — IntelliHub AI{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <div class="page-header">
+        <h1 class="page-title gradient-text"><i class="fas fa-spider" style="margin-right:12px;"></i>Web Scraper</h1>
+    </div>
+
+    <!-- New Scrape Job -->
+    <div class="glass-card" style="padding:28px;margin-bottom:24px;">
+        <h3 style="color:var(--text-primary);font-family:'Space Grotesk',sans-serif;margin-bottom:20px;">
+            <i class="fas fa-plus-circle" style="color:var(--accent-cyan);margin-right:8px;"></i>New Scrape Job
+        </h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:16px;align-items:end;">
+            <div>
+                <label class="form-label">URL to Scrape</label>
+                <input type="url" id="scrapeUrl" class="form-input" placeholder="https://example.com/data-table" required>
+            </div>
+            <div>
+                <label class="form-label">Job Name</label>
+                <input type="text" id="jobName" class="form-input" placeholder="My Data Scrape" required>
+            </div>
+            <button onclick="startScrape()" class="btn-glow" style="padding:14px 24px;white-space:nowrap;" id="scrapeBtn">
+                <i class="fas fa-spider" style="margin-right:6px;"></i>Start Scraping
+            </button>
+        </div>
+        <div id="scrapeStatus" style="display:none;margin-top:16px;padding:12px 16px;border-radius:10px;font-size:14px;"></div>
+    </div>
+
+    <!-- Scrape History -->
+    <div class="glass-card" style="padding:28px;">
+        <h3 style="color:var(--text-primary);font-family:'Space Grotesk',sans-serif;margin-bottom:20px;">
+            <i class="fas fa-history" style="color:var(--accent-purple);margin-right:8px;"></i>Scrape History
+        </h3>
+
+        {% if jobs %}
+        <table class="intel-table">
+            <thead>
+                <tr>
+                    <th>Job Name</th>
+                    <th>URL</th>
+                    <th>Status</th>
+                    <th>Rows</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for job in jobs %}
+                <tr>
+                    <td style="font-weight:500;color:var(--text-primary);">{{ job.job_name }}</td>
+                    <td><a href="{{ job.url }}" target="_blank" style="color:var(--accent-cyan);text-decoration:none;font-size:13px;">{{ job.url|truncatechars:40 }}</a></td>
+                    <td>
+                        {% if job.status == 'done' %}<span class="badge-success">Done</span>
+                        {% elif job.status == 'running' %}<span class="badge-warning">Running</span>
+                        {% elif job.status == 'failed' %}<span class="badge-error">Failed</span>
+                        {% else %}<span class="badge-info">Pending</span>{% endif %}
+                    </td>
+                    <td>{{ job.rows_scraped }}</td>
+                    <td style="color:var(--text-secondary);font-size:13px;">{{ job.created_at|date:"M d, Y" }}</td>
+                    <td>
+                        <div style="display:flex;gap:8px;">
+                            <a href="{% url 'scraper:detail' job.pk %}" class="btn-glow-outline" style="padding:6px 12px;font-size:12px;">View</a>
+                            {% if job.status == 'done' %}
+                            <a href="{% url 'scraper:download' job.pk %}" class="btn-glow-outline" style="padding:6px 12px;font-size:12px;"><i class="fas fa-download"></i></a>
+                            {% endif %}
+                            <form method="post" action="{% url 'scraper:delete' job.pk %}" style="margin:0;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn-danger" style="padding:6px 12px;font-size:12px;" onclick="return confirm('Delete this scrape job?')"><i class="fas fa-trash"></i></button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <div style="font-size:48px;margin-bottom:12px;opacity:0.3;">🕷️</div>
+            <p style="color:var(--text-secondary);">No scrape jobs yet. Enter a URL above to get started!</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function startScrape() {
+    const url = document.getElementById('scrapeUrl').value.trim();
+    const name = document.getElementById('jobName').value.trim();
+    if (!url || !name) { alert('Please fill in both URL and Job Name.'); return; }
+
+    const btn = document.getElementById('scrapeBtn');
+    const status = document.getElementById('scrapeStatus');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Scraping...';
+    status.style.display = 'block';
+    status.style.background = 'rgba(245,158,11,0.1)';
+    status.style.border = '1px solid rgba(245,158,11,0.3)';
+    status.style.color = 'var(--accent-orange)';
+    status.textContent = '⏳ Scraping in progress...';
+
+    fetch('{% url "scraper:start" %}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+        body: JSON.stringify({ url, job_name: name })
+    })
+    .then(r => r.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-spider" style="margin-right:6px;"></i>Start Scraping';
+        if (data.success) {
+            status.style.background = 'rgba(16,185,129,0.1)';
+            status.style.border = '1px solid rgba(16,185,129,0.3)';
+            status.style.color = 'var(--accent-green)';
+            status.textContent = '✅ ' + data.message;
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            status.style.background = 'rgba(239,68,68,0.1)';
+            status.style.border = '1px solid rgba(239,68,68,0.3)';
+            status.style.color = '#EF4444';
+            status.textContent = '❌ ' + (data.error || 'Scraping failed');
+        }
+    })
+    .catch(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-spider" style="margin-right:6px;"></i>Start Scraping';
+        status.style.background = 'rgba(239,68,68,0.1)';
+        status.style.color = '#EF4444';
+        status.textContent = '❌ Connection error';
+    });
+}
+</script>
+{% endblock %}

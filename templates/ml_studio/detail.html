@@ -1,0 +1,308 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ model.name }} — ML Studio — IntelliHub AI{% endblock %}
+
+{% block extra_css %}
+<style>
+    .back-link {
+        display: inline-flex; align-items: center; gap: 6px;
+        color: var(--text-muted); font-size: 0.85rem; margin-bottom: 16px;
+        transition: color 0.2s; text-decoration: none;
+    }
+    .back-link:hover { color: var(--text-primary); }
+
+    .model-header { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 28px; }
+    .model-header h1 { font-size: 1.75rem; }
+
+    .model-metrics {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 14px;
+        margin-bottom: 24px;
+    }
+    .mm-card { padding: 18px; text-align: center; }
+    .mm-val {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 1.4rem; font-weight: 700;
+        color: var(--text-primary);
+    }
+    .mm-lbl {
+        font-size: 0.72rem; color: var(--text-muted);
+        text-transform: uppercase; letter-spacing: 0.5px;
+        margin-top: 4px; font-weight: 600;
+    }
+
+    .chart-card { padding: 24px; margin-bottom: 24px; }
+    .chart-title {
+        font-size: 1rem; font-weight: 600;
+        display: flex; align-items: center; gap: 8px;
+        margin-bottom: 16px;
+    }
+    .chart-title i { color: var(--accent-cyan); }
+    .plotly-chart { width: 100%; min-height: 380px; }
+
+    /* ── Prediction Form ── */
+    .predict-card { padding: 28px; margin-bottom: 24px; }
+    .predict-title {
+        font-size: 1.1rem; font-weight: 600;
+        display: flex; align-items: center; gap: 8px;
+        margin-bottom: 20px;
+    }
+    .predict-title i { color: var(--accent-purple); }
+
+    .predict-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 14px;
+        margin-bottom: 20px;
+    }
+
+    .predict-result {
+        display: none;
+        padding: 20px;
+        background: rgba(16,185,129,0.06);
+        border: 1px solid rgba(16,185,129,0.2);
+        border-radius: 12px;
+        text-align: center;
+        margin-top: 20px;
+    }
+    .predict-result .result-label {
+        font-size: 0.8rem; color: var(--text-muted);
+        text-transform: uppercase; letter-spacing: 0.5px;
+        margin-bottom: 6px;
+    }
+    .predict-result .result-value {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 2rem; font-weight: 700;
+        color: var(--accent-green);
+    }
+
+    .inline-spinner {
+        display: inline-block; width: 16px; height: 16px;
+        border: 2px solid rgba(255,255,255,0.15);
+        border-top-color: var(--accent-purple);
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+        vertical-align: middle;
+        margin-right: 6px;
+    }
+
+    @media (max-width: 768px) {
+        .model-metrics { grid-template-columns: 1fr 1fr; }
+        .predict-grid { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<a href="{% url 'ml_studio:home' %}" class="back-link">
+    <i class="fas fa-arrow-left"></i> Back to ML Studio
+</a>
+
+<div class="model-header">
+    <h1 class="gradient-text">{{ model.name }}</h1>
+    <span class="badge-info">{{ model.get_model_type_display|default:model.model_type }}</span>
+    <span class="badge-warning">{{ model.dataset.name|truncatechars:30 }}</span>
+</div>
+
+<!-- Metric Cards -->
+<div class="model-metrics">
+    <div class="glass-card mm-card">
+        <div class="mm-val" style="color:var(--accent-green);">{% if model.accuracy is not None %}{{ model.accuracy|floatformat:2 }}%{% else %}—{% endif %}</div>
+        <div class="mm-lbl">Accuracy / R²</div>
+    </div>
+    <div class="glass-card mm-card">
+        <div class="mm-val">{% if model.precision_score is not None %}{{ model.precision_score|floatformat:3 }}{% else %}—{% endif %}</div>
+        <div class="mm-lbl">Precision</div>
+    </div>
+    <div class="glass-card mm-card">
+        <div class="mm-val">{% if model.recall_score is not None %}{{ model.recall_score|floatformat:3 }}{% else %}—{% endif %}</div>
+        <div class="mm-lbl">Recall</div>
+    </div>
+    <div class="glass-card mm-card">
+        <div class="mm-val">{% if model.f1_score is not None %}{{ model.f1_score|floatformat:3 }}{% else %}—{% endif %}</div>
+        <div class="mm-lbl">F1 Score</div>
+    </div>
+    <div class="glass-card mm-card">
+        <div class="mm-val">{% if model.mse is not None %}{{ model.mse|floatformat:4 }}{% else %}—{% endif %}</div>
+        <div class="mm-lbl">MSE</div>
+    </div>
+    <div class="glass-card mm-card">
+        <div class="mm-val">{% if model.mae is not None %}{{ model.mae|floatformat:4 }}{% else %}—{% endif %}</div>
+        <div class="mm-lbl">MAE</div>
+    </div>
+</div>
+
+<!-- Plotly Chart -->
+<div class="glass-card chart-card">
+    <h2 class="chart-title"><i class="fas fa-chart-bar"></i> Model Evaluation Chart</h2>
+    <div id="modelChart" class="plotly-chart"></div>
+</div>
+
+<!-- Prediction Form -->
+<div class="glass-card predict-card">
+    <h2 class="predict-title"><i class="fas fa-magic"></i> Make a Prediction</h2>
+    <form id="predictForm">
+        {% csrf_token %}
+        <div class="predict-grid" id="predictFields">
+            {% for feat in feature_columns %}
+            <div>
+                <label class="form-label" for="feat_{{ forloop.counter }}">{{ feat }}</label>
+                <input type="text" class="form-input" id="feat_{{ forloop.counter }}"
+                       name="{{ feat }}" placeholder="Enter value" required>
+            </div>
+            {% empty %}
+            <p style="color:var(--text-muted);grid-column:1/-1;">No feature columns available for prediction.</p>
+            {% endfor %}
+        </div>
+        {% if feature_columns %}
+        <button type="submit" class="btn-glow" id="predictBtn">
+            <i class="fas fa-bolt"></i> Predict
+        </button>
+        {% endif %}
+    </form>
+    <div class="predict-result" id="predictResult">
+        <div class="result-label">Prediction Result</div>
+        <div class="result-value" id="predictValue">—</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    /* ── Render evaluation chart from model metrics ── */
+    var metricsJson = {{ metrics_json|safe|default:"{}" }};
+    var chartDiv = document.getElementById('modelChart');
+
+    if (metricsJson.confusion_matrix) {
+        /* Classification: confusion matrix heatmap */
+        var cm = metricsJson.confusion_matrix;
+        var labels = metricsJson.class_labels || [];
+        var data = [{
+            z: cm,
+            x: labels.length ? labels : undefined,
+            y: labels.length ? labels : undefined,
+            type: 'heatmap',
+            colorscale: [[0, '#0A0A0F'], [0.5, '#7C3AED'], [1, '#06B6D4']],
+            showscale: true,
+            hoverongaps: false
+        }];
+        var layout = {
+            title: { text: 'Confusion Matrix', font: { color: '#F8FAFC', family: 'Space Grotesk' } },
+            xaxis: { title: 'Predicted', color: '#94A3B8', gridcolor: 'rgba(255,255,255,0.05)' },
+            yaxis: { title: 'Actual', color: '#94A3B8', gridcolor: 'rgba(255,255,255,0.05)', autorange: 'reversed' },
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            font: { color: '#94A3B8' },
+            margin: { l: 60, r: 30, t: 50, b: 60 }
+        };
+        Plotly.newPlot(chartDiv, data, layout, { responsive: true });
+
+    } else if (metricsJson.y_true && metricsJson.y_pred) {
+        /* Regression: predicted vs actual scatter */
+        var trace = {
+            x: metricsJson.y_true,
+            y: metricsJson.y_pred,
+            mode: 'markers',
+            type: 'scatter',
+            marker: { color: '#7C3AED', size: 6, opacity: 0.7 },
+            name: 'Predictions'
+        };
+        var minVal = Math.min.apply(null, metricsJson.y_true.concat(metricsJson.y_pred));
+        var maxVal = Math.max.apply(null, metricsJson.y_true.concat(metricsJson.y_pred));
+        var ideal = {
+            x: [minVal, maxVal],
+            y: [minVal, maxVal],
+            mode: 'lines',
+            type: 'scatter',
+            line: { color: '#06B6D4', dash: 'dash', width: 2 },
+            name: 'Ideal'
+        };
+        var layout = {
+            title: { text: 'Predicted vs Actual', font: { color: '#F8FAFC', family: 'Space Grotesk' } },
+            xaxis: { title: 'Actual', color: '#94A3B8', gridcolor: 'rgba(255,255,255,0.05)' },
+            yaxis: { title: 'Predicted', color: '#94A3B8', gridcolor: 'rgba(255,255,255,0.05)' },
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            font: { color: '#94A3B8' },
+            margin: { l: 60, r: 30, t: 50, b: 60 },
+            showlegend: true,
+            legend: { font: { color: '#94A3B8' } }
+        };
+        Plotly.newPlot(chartDiv, [trace, ideal], layout, { responsive: true });
+
+    } else {
+        chartDiv.innerHTML = '<div class="empty-state" style="padding:40px;"><i class="fas fa-chart-bar"></i><h3>No Chart Data</h3><p>Evaluation metrics are not available for this model.</p></div>';
+    }
+
+    /* ── Prediction via AJAX ── */
+    var predictForm = document.getElementById('predictForm');
+    var predictBtn = document.getElementById('predictBtn');
+    var predictResult = document.getElementById('predictResult');
+    var predictValue = document.getElementById('predictValue');
+
+    if (predictForm && predictBtn) {
+        predictForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            var formData = new FormData(predictForm);
+            var payload = {};
+            formData.forEach(function(val, key) {
+                if (key !== 'csrfmiddlewaretoken') {
+                    payload[key] = isNaN(parseFloat(val)) ? val : parseFloat(val);
+                }
+            });
+
+            predictBtn.innerHTML = '<span class="inline-spinner"></span> Predicting…';
+            predictBtn.disabled = true;
+
+            fetch('/ml-studio/{{ model.pk }}/predict/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                predictBtn.innerHTML = '<i class="fas fa-bolt"></i> Predict';
+                predictBtn.disabled = false;
+                if (data.prediction !== undefined) {
+                    predictValue.textContent = data.prediction;
+                    predictResult.style.display = 'block';
+                } else {
+                    showToast(data.error || 'Prediction failed.', 'error');
+                }
+            })
+            .catch(function(err) {
+                predictBtn.innerHTML = '<i class="fas fa-bolt"></i> Predict';
+                predictBtn.disabled = false;
+                showToast('Request failed.', 'error');
+            });
+        });
+    }
+
+    function getCookie(name) {
+        var value = '; ' + document.cookie;
+        var parts = value.split('; ' + name + '=');
+        if (parts.length === 2) return parts.pop().split(';').shift();
+        return '';
+    }
+
+    function showToast(msg, type) {
+        var container = document.getElementById('toastContainer');
+        if (!container) return;
+        var icons = { success: 'fa-check-circle', error: 'fa-times-circle', warning: 'fa-exclamation-triangle', info: 'fa-info-circle' };
+        var toast = document.createElement('div');
+        toast.className = 'toast toast-' + (type || 'info');
+        toast.innerHTML = '<i class="fas ' + (icons[type] || icons.info) + ' toast-icon"></i><span>' + msg + '</span><button class="toast-close" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>';
+        container.appendChild(toast);
+        setTimeout(function() { if (toast.parentElement) toast.remove(); }, 5000);
+    }
+});
+</script>
+{% endblock %}

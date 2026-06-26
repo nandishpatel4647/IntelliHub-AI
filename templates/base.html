@@ -1,0 +1,125 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="IntelliHub AI — Intelligent Data Analytics & Machine Learning Platform">
+    <title>{% block title %}IntelliHub AI{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/intellihub.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    {% block body %}
+    <!-- Mobile menu button -->
+    <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle menu">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- SIDEBAR NAVIGATION -->
+    {% if user.is_authenticated %}
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-logo">
+            <span class="gradient-text">IntelliHub</span> AI
+        </div>
+
+        <div class="sidebar-section-title">MAIN</div>
+        <a href="{% url 'dashboard:home' %}" class="sidebar-nav-item {% if request.resolver_match.app_name == 'dashboard' %}active{% endif %}">
+            <span class="nav-icon"><i class="fas fa-th-large"></i></span> Dashboard
+        </a>
+        <a href="{% url 'datasets:list' %}" class="sidebar-nav-item {% if request.resolver_match.app_name == 'datasets' %}active{% endif %}">
+            <span class="nav-icon"><i class="fas fa-database"></i></span> Datasets
+        </a>
+
+        <div class="sidebar-section-title">ANALYSIS</div>
+        <a href="{% url 'cleaning:home' %}" class="sidebar-nav-item {% if request.resolver_match.app_name == 'cleaning' %}active{% endif %}">
+            <span class="nav-icon"><i class="fas fa-broom"></i></span> Data Cleaning
+        </a>
+        <a href="{% url 'eda:home' %}" class="sidebar-nav-item {% if request.resolver_match.app_name == 'eda' %}active{% endif %}">
+            <span class="nav-icon"><i class="fas fa-chart-bar"></i></span> EDA Studio
+        </a>
+
+        <div class="sidebar-section-title">AI & ML</div>
+        <a href="{% url 'ml_studio:home' %}" class="sidebar-nav-item {% if request.resolver_match.app_name == 'ml_studio' %}active{% endif %}">
+            <span class="nav-icon"><i class="fas fa-robot"></i></span> ML Studio
+        </a>
+        <a href="{% url 'dl_studio:home' %}" class="sidebar-nav-item {% if request.resolver_match.app_name == 'dl_studio' %}active{% endif %}">
+            <span class="nav-icon"><i class="fas fa-brain"></i></span> Deep Learning
+        </a>
+        <a href="{% url 'ai_assistant:home' %}" class="sidebar-nav-item {% if request.resolver_match.app_name == 'ai_assistant' %}active{% endif %}">
+            <span class="nav-icon"><i class="fas fa-comments"></i></span> AI Assistant
+        </a>
+
+        <div class="sidebar-section-title">TOOLS</div>
+        <a href="{% url 'scraper:home' %}" class="sidebar-nav-item {% if request.resolver_match.app_name == 'scraper' %}active{% endif %}">
+            <span class="nav-icon"><i class="fas fa-spider"></i></span> Web Scraper
+        </a>
+        <a href="{% url 'api_center:docs' %}" class="sidebar-nav-item {% if request.resolver_match.app_name == 'api_center' %}active{% endif %}">
+            <span class="nav-icon"><i class="fas fa-code"></i></span> API Center
+        </a>
+        <a href="{% url 'reports:list' %}" class="sidebar-nav-item {% if request.resolver_match.app_name == 'reports' %}active{% endif %}">
+            <span class="nav-icon"><i class="fas fa-file-pdf"></i></span> Reports
+        </a>
+
+        {% if user.role == 'admin' %}
+        <div class="sidebar-section-title">ADMIN</div>
+        <a href="{% url 'admin_panel:dashboard' %}" class="sidebar-nav-item {% if request.resolver_match.app_name == 'admin_panel' %}active{% endif %}">
+            <span class="nav-icon"><i class="fas fa-shield-alt"></i></span> Admin Panel
+        </a>
+        {% endif %}
+
+        <!-- Bottom: User profile -->
+        <div style="position:absolute; bottom:0; left:0; right:0; padding:16px 24px; border-top:1px solid var(--card-border);">
+            <a href="{% url 'accounts:profile' %}" class="sidebar-nav-item" style="margin:0; border-radius:10px;">
+                <span class="nav-icon">
+                    {% if user.profile_photo %}
+                    <img src="{{ user.profile_photo.url }}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">
+                    {% else %}
+                    <i class="fas fa-user-circle"></i>
+                    {% endif %}
+                </span>
+                <div>
+                    <div style="font-size:13px;color:var(--text-primary);">{{ user.get_full_name|default:user.username }}</div>
+                    <div style="font-size:11px;color:var(--text-muted);text-transform:capitalize;">{{ user.role|default:'Student' }}</div>
+                </div>
+            </a>
+            <a href="{% url 'accounts:logout' %}" class="sidebar-nav-item" style="margin:0; margin-top:4px; border-radius:10px; color:var(--text-muted);">
+                <span class="nav-icon"><i class="fas fa-sign-out-alt"></i></span> Logout
+            </a>
+        </div>
+    </nav>
+    {% endif %}
+
+    <!-- MAIN CONTENT AREA -->
+    {% if user.is_authenticated %}
+    <main class="main-content">
+    {% else %}
+    <main>
+    {% endif %}
+        <!-- Django Messages as Toasts -->
+        {% if messages %}
+        <div class="django-messages" style="display:none;">
+            {% for message in messages %}
+            <div data-type="{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Toast container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Loading overlay -->
+    <div class="loading-overlay" id="loadingOverlay" style="display:none;">
+        <div class="spinner"></div>
+    </div>
+    {% endblock %}
+
+    <!-- Global JS -->
+    <script src="{% static 'js/intellihub.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

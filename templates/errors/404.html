@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}404 — Page Not Found | IntelliHub AI{% endblock %}
+
+{% block body %}
+<style>
+    .error-page {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        z-index: 1;
+        padding: 24px;
+    }
+
+    .error-container {
+        text-align: center;
+        max-width: 520px;
+    }
+
+    .error-logo {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 48px;
+        display: inline-block;
+    }
+
+    .error-code {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 120px;
+        font-weight: 700;
+        line-height: 1;
+        margin-bottom: 16px;
+        background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .error-subtitle {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 28px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 12px;
+    }
+
+    .error-message {
+        font-size: 16px;
+        color: var(--text-secondary);
+        line-height: 1.7;
+        margin-bottom: 40px;
+    }
+
+    .error-actions {
+        display: flex;
+        justify-content: center;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+
+    .error-decoration {
+        position: absolute;
+        width: 300px;
+        height: 300px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(124, 58, 237, 0.08) 0%, transparent 70%);
+        pointer-events: none;
+    }
+
+    .error-decoration-1 {
+        top: 10%;
+        left: 5%;
+        animation: pulse 4s ease-in-out infinite;
+    }
+
+    .error-decoration-2 {
+        bottom: 10%;
+        right: 5%;
+        background: radial-gradient(circle, rgba(6, 182, 212, 0.06) 0%, transparent 70%);
+        animation: pulse 5s ease-in-out infinite 1s;
+    }
+</style>
+
+<div class="error-page">
+    <div class="error-decoration error-decoration-1"></div>
+    <div class="error-decoration error-decoration-2"></div>
+
+    <div class="error-container">
+        <div class="error-logo">
+            <span class="gradient-text">IntelliHub</span> AI
+        </div>
+
+        <div class="error-code">404</div>
+        <h1 class="error-subtitle">Page Not Found</h1>
+        <p class="error-message">
+            The page you're looking for doesn't exist or has been moved.
+        </p>
+
+        <div class="error-actions">
+            <a href="{% url 'dashboard:home' %}" class="btn-glow">
+                <i class="fas fa-th-large"></i> Go to Dashboard
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+{% endblock %}

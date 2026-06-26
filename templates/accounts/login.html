@@ -1,0 +1,362 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Sign In — IntelliHub AI{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ===== FULL-SCREEN SPLIT LAYOUT ===== */
+    .auth-wrapper {
+        display: flex;
+        min-height: 100vh;
+        width: 100%;
+        overflow: hidden;
+    }
+
+    /* ---------- LEFT BRANDING PANEL ---------- */
+    .auth-brand {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 60px 48px;
+        background: linear-gradient(135deg, #0A0A0F 0%, #1a0a2e 40%, #16213e 100%);
+        position: relative;
+        overflow: hidden;
+    }
+    .auth-brand::before {
+        content: '';
+        position: absolute;
+        top: -40%;
+        left: -20%;
+        width: 80%;
+        height: 80%;
+        background: radial-gradient(circle, rgba(124,58,237,0.15) 0%, transparent 70%);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+    .auth-brand::after {
+        content: '';
+        position: absolute;
+        bottom: -30%;
+        right: -10%;
+        width: 60%;
+        height: 60%;
+        background: radial-gradient(circle, rgba(6,182,212,0.12) 0%, transparent 70%);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+    .brand-content {
+        position: relative;
+        z-index: 2;
+        text-align: center;
+        max-width: 440px;
+    }
+    .brand-logo {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 42px;
+        font-weight: 700;
+        background: linear-gradient(135deg, #7C3AED, #06B6D4);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 16px;
+    }
+    .brand-tagline {
+        color: var(--text-secondary, #94a3b8);
+        font-family: 'Inter', sans-serif;
+        font-size: 18px;
+        line-height: 1.6;
+        margin-bottom: 40px;
+    }
+    .feature-pills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        justify-content: center;
+    }
+    .feature-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 18px;
+        border-radius: 999px;
+        font-family: 'Inter', sans-serif;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text-primary, #f1f5f9);
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.08);
+        backdrop-filter: blur(8px);
+    }
+    .feature-pill i {
+        color: #7C3AED;
+        font-size: 14px;
+    }
+
+    /* ---------- RIGHT FORM PANEL ---------- */
+    .auth-form-panel {
+        flex: 1;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 40px;
+        background: var(--primary-bg, #0A0A0F);
+    }
+    .auth-card {
+        width: 100%;
+        max-width: 440px;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 20px;
+        padding: 48px 40px;
+        backdrop-filter: blur(20px);
+    }
+    .auth-card h2 {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--text-primary, #f1f5f9);
+        margin-bottom: 8px;
+    }
+    .auth-card .subtitle {
+        color: var(--text-secondary, #94a3b8);
+        font-family: 'Inter', sans-serif;
+        font-size: 14px;
+        margin-bottom: 32px;
+    }
+
+    /* ---------- FORM ELEMENTS ---------- */
+    .form-group {
+        margin-bottom: 20px;
+    }
+    .form-group label {
+        display: block;
+        font-family: 'Inter', sans-serif;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        color: var(--text-secondary, #94a3b8);
+        margin-bottom: 8px;
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        width: 100%;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid var(--card-border, rgba(255,255,255,0.06));
+        border-radius: 10px;
+        padding: 14px 16px;
+        color: var(--text-primary, #f1f5f9);
+        font-family: 'Inter', sans-serif;
+        font-size: 14px;
+        outline: none;
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        box-sizing: border-box;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+        border-color: #7C3AED;
+        box-shadow: 0 0 0 3px rgba(124,58,237,0.15);
+    }
+    .form-group input::placeholder,
+    .form-group textarea::placeholder {
+        color: rgba(255,255,255,0.25);
+    }
+
+    /* Submit button */
+    .btn-glow {
+        width: 100%;
+        padding: 14px 24px;
+        border: none;
+        border-radius: 10px;
+        font-family: 'Inter', sans-serif;
+        font-size: 15px;
+        font-weight: 600;
+        color: #fff;
+        background: linear-gradient(135deg, #7C3AED, #06B6D4);
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        margin-top: 8px;
+    }
+    .btn-glow:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 8px 30px rgba(124,58,237,0.35);
+    }
+
+    /* Links */
+    .auth-footer {
+        text-align: center;
+        margin-top: 24px;
+        font-family: 'Inter', sans-serif;
+        font-size: 14px;
+        color: var(--text-secondary, #94a3b8);
+    }
+    .auth-footer a {
+        color: #7C3AED;
+        text-decoration: none;
+        font-weight: 600;
+    }
+    .auth-footer a:hover {
+        text-decoration: underline;
+    }
+
+    /* Toast notifications */
+    .toast-container {
+        position: fixed;
+        top: 24px;
+        right: 24px;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    .toast {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 20px;
+        border-radius: 12px;
+        font-family: 'Inter', sans-serif;
+        font-size: 14px;
+        color: #f1f5f9;
+        background: rgba(30,30,40,0.95);
+        border: 1px solid rgba(255,255,255,0.08);
+        backdrop-filter: blur(12px);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+        animation: slideIn 0.3s ease, fadeOut 0.4s ease 4s forwards;
+        max-width: 380px;
+    }
+    .toast.toast-success { border-left: 3px solid #10b981; }
+    .toast.toast-error   { border-left: 3px solid #ef4444; }
+    .toast.toast-warning { border-left: 3px solid #f59e0b; }
+    .toast.toast-info    { border-left: 3px solid #06B6D4; }
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to   { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes fadeOut {
+        from { opacity: 1; }
+        to   { opacity: 0; pointer-events: none; }
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 768px) {
+        .auth-wrapper {
+            flex-direction: column;
+        }
+        .auth-brand {
+            display: none;
+        }
+        .auth-form-panel {
+            padding: 24px 16px;
+        }
+        .auth-card {
+            padding: 32px 24px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Toast Notifications -->
+{% if messages %}
+<div class="toast-container">
+    {% for message in messages %}
+    <div class="toast toast-{{ message.tags }}">
+        {% if message.tags == 'success' %}
+            <i class="fas fa-check-circle"></i>
+        {% elif message.tags == 'error' %}
+            <i class="fas fa-exclamation-circle"></i>
+        {% elif message.tags == 'warning' %}
+            <i class="fas fa-exclamation-triangle"></i>
+        {% else %}
+            <i class="fas fa-info-circle"></i>
+        {% endif %}
+        <span>{{ message }}</span>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="auth-wrapper">
+    <!-- ===== LEFT — BRANDING ===== -->
+    <div class="auth-brand">
+        <div class="brand-content">
+            <div class="brand-logo">IntelliHub AI</div>
+            <p class="brand-tagline">
+                Your intelligent data analytics &amp; machine learning
+                platform — from raw data to production models.
+            </p>
+            <div class="feature-pills">
+                <span class="feature-pill"><i class="fas fa-chart-bar"></i> Auto EDA</span>
+                <span class="feature-pill"><i class="fas fa-cogs"></i> ML Studio</span>
+                <span class="feature-pill"><i class="fas fa-brain"></i> Deep Learning</span>
+                <span class="feature-pill"><i class="fas fa-file-alt"></i> AI Reports</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== RIGHT — LOGIN FORM ===== -->
+    <div class="auth-form-panel">
+        <div class="auth-card">
+            <h2>Welcome Back</h2>
+            <p class="subtitle">Sign in to your IntelliHub workspace</p>
+
+            <form method="POST" action="{% url 'accounts:login' %}{% if next %}?next={{ next }}{% endif %}">
+                {% csrf_token %}
+
+                <div class="form-group">
+                    <label for="id_username">Username</label>
+                    {{ form.username }}
+                    {% if form.username.errors %}
+                        <small style="color:#ef4444; font-size:12px; margin-top:4px; display:block;">
+                            {{ form.username.errors.0 }}
+                        </small>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label for="id_password">Password</label>
+                    {{ form.password }}
+                    {% if form.password.errors %}
+                        <small style="color:#ef4444; font-size:12px; margin-top:4px; display:block;">
+                            {{ form.password.errors.0 }}
+                        </small>
+                    {% endif %}
+                </div>
+
+                {% if next %}
+                <input type="hidden" name="next" value="{{ next }}">
+                {% endif %}
+
+                <button type="submit" class="btn-glow">
+                    <i class="fas fa-sign-in-alt"></i>&nbsp; Sign In
+                </button>
+            </form>
+
+            <div class="auth-footer">
+                Don&rsquo;t have an account?
+                <a href="{% url 'accounts:register' %}">Create one</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-dismiss toast notifications after 4.5 seconds
+    document.addEventListener('DOMContentLoaded', function () {
+        const toasts = document.querySelectorAll('.toast');
+        toasts.forEach(function (toast) {
+            setTimeout(function () {
+                toast.style.display = 'none';
+            }, 4500);
+        });
+    });
+</script>
+{% endblock %}

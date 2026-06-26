@@ -1,0 +1,222 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ model.name }} — Deep Learning — IntelliHub AI{% endblock %}
+
+{% block extra_css %}
+<style>
+    .back-link {
+        display: inline-flex; align-items: center; gap: 6px;
+        color: var(--text-muted); font-size: 0.85rem; margin-bottom: 16px;
+        transition: color 0.2s; text-decoration: none;
+    }
+    .back-link:hover { color: var(--text-primary); }
+
+    .dl-header { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 28px; }
+    .dl-header h1 { font-size: 1.75rem; }
+
+    /* ── Metrics ── */
+    .dl-det-metrics {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 14px;
+        margin-bottom: 24px;
+    }
+    .dlm-card { padding: 18px; text-align: center; }
+    .dlm-val {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 1.4rem; font-weight: 700;
+        color: var(--text-primary);
+    }
+    .dlm-lbl {
+        font-size: 0.72rem; color: var(--text-muted);
+        text-transform: uppercase; letter-spacing: 0.5px;
+        margin-top: 4px; font-weight: 600;
+    }
+
+    /* ── Architecture ── */
+    .arch-card { padding: 24px; margin-bottom: 24px; }
+    .arch-title {
+        font-size: 1rem; font-weight: 600;
+        display: flex; align-items: center; gap: 8px;
+        margin-bottom: 16px;
+    }
+    .arch-title i { color: var(--accent-purple); }
+    .arch-layer {
+        display: flex; align-items: center; gap: 12px;
+        padding: 10px 14px;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid var(--card-border);
+        border-radius: 8px;
+        margin-bottom: 6px;
+        font-size: 0.88rem;
+    }
+    .arch-layer-num {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.75rem; color: var(--accent-purple);
+        font-weight: 600; min-width: 28px;
+    }
+    .arch-layer-type {
+        font-weight: 600; color: var(--text-primary);
+    }
+    .arch-layer-detail {
+        color: var(--text-muted); font-size: 0.82rem;
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* ── Charts ── */
+    .chart-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-bottom: 24px;
+    }
+    .chart-card { padding: 24px; }
+    .chart-title {
+        font-size: 1rem; font-weight: 600;
+        display: flex; align-items: center; gap: 8px;
+        margin-bottom: 16px;
+    }
+    .chart-title i { color: var(--accent-cyan); }
+    .plotly-chart { width: 100%; min-height: 320px; }
+
+    @media (max-width: 768px) {
+        .chart-row { grid-template-columns: 1fr; }
+        .dl-det-metrics { grid-template-columns: 1fr 1fr; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<a href="{% url 'dl_studio:home' %}" class="back-link">
+    <i class="fas fa-arrow-left"></i> Back to Deep Learning Studio
+</a>
+
+<div class="dl-header">
+    <h1 class="gradient-text">{{ model.name }}</h1>
+    <span class="badge-info">Neural Network</span>
+    <span class="badge-warning">{{ model.dataset.name|truncatechars:30 }}</span>
+</div>
+
+<!-- Metric Cards -->
+<div class="dl-det-metrics">
+    <div class="glass-card dlm-card">
+        <div class="dlm-val" style="color:var(--accent-green);">{% if model.accuracy is not None %}{{ model.accuracy|floatformat:2 }}%{% else %}—{% endif %}</div>
+        <div class="dlm-lbl">Accuracy</div>
+    </div>
+    <div class="glass-card dlm-card">
+        <div class="dlm-val">{% if model.loss is not None %}{{ model.loss|floatformat:4 }}{% else %}—{% endif %}</div>
+        <div class="dlm-lbl">Final Loss</div>
+    </div>
+    <div class="glass-card dlm-card">
+        <div class="dlm-val">{% if model.val_accuracy is not None %}{{ model.val_accuracy|floatformat:2 }}%{% else %}—{% endif %}</div>
+        <div class="dlm-lbl">Val Accuracy</div>
+    </div>
+    <div class="glass-card dlm-card">
+        <div class="dlm-val">{% if model.val_loss is not None %}{{ model.val_loss|floatformat:4 }}{% else %}—{% endif %}</div>
+        <div class="dlm-lbl">Val Loss</div>
+    </div>
+    <div class="glass-card dlm-card">
+        <div class="dlm-val">{{ model.epochs|default:"—" }}</div>
+        <div class="dlm-lbl">Epochs</div>
+    </div>
+    <div class="glass-card dlm-card">
+        <div class="dlm-val">{{ model.num_layers|default:"—" }}</div>
+        <div class="dlm-lbl">Layers</div>
+    </div>
+</div>
+
+<!-- Architecture -->
+{% if architecture %}
+<div class="glass-card arch-card">
+    <h2 class="arch-title"><i class="fas fa-layer-group"></i> Network Architecture</h2>
+    {% for layer in architecture %}
+    <div class="arch-layer">
+        <span class="arch-layer-num">L{{ forloop.counter }}</span>
+        <span class="arch-layer-type">{{ layer.type|default:"Dense" }}</span>
+        <span class="arch-layer-detail">
+            {% if layer.units %}units={{ layer.units }}{% endif %}
+            {% if layer.activation %}, activation={{ layer.activation }}{% endif %}
+            {% if layer.rate %}, rate={{ layer.rate }}{% endif %}
+        </span>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Training Charts -->
+<div class="chart-row">
+    <div class="glass-card chart-card">
+        <h2 class="chart-title"><i class="fas fa-chart-line"></i> Training Loss</h2>
+        <div id="lossChart" class="plotly-chart"></div>
+    </div>
+    <div class="glass-card chart-card">
+        <h2 class="chart-title"><i class="fas fa-chart-area"></i> Accuracy Curve</h2>
+        <div id="accChart" class="plotly-chart"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var history = {{ training_history_json|safe|default:"{}" }};
+    var darkLayout = {
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        font: { color: '#94A3B8', family: 'Inter, sans-serif' },
+        xaxis: { title: 'Epoch', color: '#94A3B8', gridcolor: 'rgba(255,255,255,0.05)' },
+        margin: { l: 50, r: 20, t: 30, b: 50 },
+        showlegend: true,
+        legend: { font: { color: '#94A3B8' } }
+    };
+
+    /* Loss Chart */
+    var lossDiv = document.getElementById('lossChart');
+    if (history.loss && history.loss.length) {
+        var epochs = [];
+        for (var i = 1; i <= history.loss.length; i++) epochs.push(i);
+        var traces = [{
+            x: epochs, y: history.loss,
+            mode: 'lines', name: 'Train Loss',
+            line: { color: '#7C3AED', width: 2 }
+        }];
+        if (history.val_loss && history.val_loss.length) {
+            traces.push({
+                x: epochs, y: history.val_loss,
+                mode: 'lines', name: 'Val Loss',
+                line: { color: '#06B6D4', width: 2, dash: 'dash' }
+            });
+        }
+        var layout = Object.assign({}, darkLayout, { yaxis: { title: 'Loss', color: '#94A3B8', gridcolor: 'rgba(255,255,255,0.05)' } });
+        Plotly.newPlot(lossDiv, traces, layout, { responsive: true });
+    } else {
+        lossDiv.innerHTML = '<div class="empty-state" style="padding:40px;"><i class="fas fa-chart-line"></i><p>No training loss data.</p></div>';
+    }
+
+    /* Accuracy Chart */
+    var accDiv = document.getElementById('accChart');
+    if (history.accuracy && history.accuracy.length) {
+        var epochs2 = [];
+        for (var j = 1; j <= history.accuracy.length; j++) epochs2.push(j);
+        var traces2 = [{
+            x: epochs2, y: history.accuracy,
+            mode: 'lines', name: 'Train Accuracy',
+            line: { color: '#10B981', width: 2 }
+        }];
+        if (history.val_accuracy && history.val_accuracy.length) {
+            traces2.push({
+                x: epochs2, y: history.val_accuracy,
+                mode: 'lines', name: 'Val Accuracy',
+                line: { color: '#F59E0B', width: 2, dash: 'dash' }
+            });
+        }
+        var layout2 = Object.assign({}, darkLayout, { yaxis: { title: 'Accuracy', color: '#94A3B8', gridcolor: 'rgba(255,255,255,0.05)' } });
+        Plotly.newPlot(accDiv, traces2, layout2, { responsive: true });
+    } else {
+        accDiv.innerHTML = '<div class="empty-state" style="padding:40px;"><i class="fas fa-chart-area"></i><p>No accuracy data.</p></div>';
+    }
+});
+</script>
+{% endblock %}

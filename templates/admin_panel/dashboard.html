@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Admin Panel — IntelliHub AI{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <div class="page-header">
+        <h1 class="page-title gradient-text"><i class="fas fa-shield-alt" style="margin-right:12px;"></i>Admin Panel</h1>
+        <a href="{% url 'admin_panel:users' %}" class="btn-glow-outline" style="padding:10px 20px;">
+            <i class="fas fa-users" style="margin-right:6px;"></i>Manage Users
+        </a>
+    </div>
+
+    <!-- Platform Metrics -->
+    <div class="metric-grid" style="grid-template-columns:repeat(auto-fill, minmax(180px, 1fr));margin-bottom:28px;">
+        <div class="glass-card metric-card">
+            <div class="metric-icon">👥</div>
+            <div class="metric-number" style="color:var(--accent-purple);" data-count="{{ total_users }}">{{ total_users }}</div>
+            <div class="metric-label">Total Users</div>
+        </div>
+        <div class="glass-card metric-card">
+            <div class="metric-icon">📊</div>
+            <div class="metric-number" style="color:var(--accent-cyan);" data-count="{{ total_datasets }}">{{ total_datasets }}</div>
+            <div class="metric-label">Total Datasets</div>
+        </div>
+        <div class="glass-card metric-card">
+            <div class="metric-icon">🤖</div>
+            <div class="metric-number" style="color:var(--accent-green);" data-count="{{ total_models }}">{{ total_models }}</div>
+            <div class="metric-label">Models Trained</div>
+        </div>
+        <div class="glass-card metric-card">
+            <div class="metric-icon">📄</div>
+            <div class="metric-number" style="color:var(--accent-orange);" data-count="{{ total_reports }}">{{ total_reports }}</div>
+            <div class="metric-label">Reports</div>
+        </div>
+        <div class="glass-card metric-card">
+            <div class="metric-icon">🎯</div>
+            <div class="metric-number" style="color:var(--accent-pink);" data-count="{{ total_predictions }}">{{ total_predictions }}</div>
+            <div class="metric-label">Predictions</div>
+        </div>
+        <div class="glass-card metric-card">
+            <div class="metric-icon">🕷️</div>
+            <div class="metric-number" style="color:var(--accent-blue);" data-count="{{ total_scrape_jobs }}">{{ total_scrape_jobs }}</div>
+            <div class="metric-label">Scrape Jobs</div>
+        </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
+        <!-- Users by Role -->
+        <div class="glass-card" style="padding:28px;">
+            <h3 style="color:var(--text-primary);font-family:'Space Grotesk',sans-serif;margin-bottom:20px;">
+                <i class="fas fa-chart-bar" style="color:var(--accent-purple);margin-right:8px;"></i>Users by Role
+            </h3>
+            {% for item in users_by_role %}
+            <div style="margin-bottom:14px;">
+                <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                    <span style="color:var(--text-secondary);font-size:13px;text-transform:capitalize;">{{ item.role }}</span>
+                    <span style="color:var(--text-primary);font-size:13px;font-weight:600;">{{ item.count }}</span>
+                </div>
+                <div style="height:8px;background:rgba(255,255,255,0.05);border-radius:4px;overflow:hidden;">
+                    <div style="height:100%;width:{% widthratio item.count total_users 100 %}%;background:linear-gradient(90deg,var(--accent-purple),var(--accent-cyan));border-radius:4px;transition:width 1s ease;"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Storage Usage -->
+        <div class="glass-card" style="padding:28px;">
+            <h3 style="color:var(--text-primary);font-family:'Space Grotesk',sans-serif;margin-bottom:20px;">
+                <i class="fas fa-database" style="color:var(--accent-cyan);margin-right:8px;"></i>Storage Usage
+            </h3>
+            <div style="text-align:center;padding:20px;">
+                <div style="font-size:48px;font-family:'Space Grotesk',sans-serif;font-weight:700;color:var(--accent-cyan);">
+                    {{ storage_used|filesizeformat }}
+                </div>
+                <p style="color:var(--text-secondary);margin-top:8px;">Total storage used by all datasets</p>
+            </div>
+
+            {% if datasets_by_type %}
+            <div style="margin-top:20px;">
+                <p style="color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">By File Type</p>
+                {% for item in datasets_by_type %}
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                    <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:{% if item.file_type == 'csv' %}var(--accent-green){% elif item.file_type == 'excel' %}var(--accent-orange){% else %}var(--accent-cyan){% endif %};"></span>
+                    <span style="color:var(--text-secondary);font-size:13px;text-transform:uppercase;flex:1;">{{ item.file_type }}</span>
+                    <span style="color:var(--text-primary);font-weight:600;">{{ item.count }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Recent Users -->
+    <div class="glass-card" style="padding:28px;">
+        <h3 style="color:var(--text-primary);font-family:'Space Grotesk',sans-serif;margin-bottom:20px;">
+            <i class="fas fa-user-clock" style="color:var(--accent-green);margin-right:8px;"></i>Recent Users
+        </h3>
+        {% if recent_users %}
+        <table class="intel-table">
+            <thead>
+                <tr><th>Username</th><th>Email</th><th>Role</th><th>Joined</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+                {% for u in recent_users %}
+                <tr>
+                    <td style="font-weight:500;color:var(--text-primary);">{{ u.username }}</td>
+                    <td style="color:var(--text-secondary);">{{ u.email }}</td>
+                    <td>
+                        {% if u.role == 'admin' %}<span class="badge-error">Admin</span>
+                        {% elif u.role == 'researcher' %}<span class="badge-success">Researcher</span>
+                        {% elif u.role == 'data_scientist' %}<span class="badge-info">Data Scientist</span>
+                        {% elif u.role == 'company' %}<span class="badge-warning">Company</span>
+                        {% else %}<span class="badge-info">Student</span>{% endif %}
+                    </td>
+                    <td style="color:var(--text-secondary);font-size:13px;">{{ u.date_joined|date:"M d, Y" }}</td>
+                    <td><a href="{% url 'admin_panel:user_detail' u.pk %}" class="btn-glow-outline" style="padding:4px 12px;font-size:12px;">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state"><p style="color:var(--text-secondary);">No users found.</p></div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

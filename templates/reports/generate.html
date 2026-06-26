@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Generate Report — IntelliHub AI{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <a href="{% url 'reports:list' %}" style="color:var(--accent-cyan);text-decoration:none;font-size:14px;display:inline-flex;align-items:center;gap:6px;margin-bottom:20px;">
+        <i class="fas fa-arrow-left"></i> Back to Reports
+    </a>
+
+    <div class="page-header">
+        <h1 class="page-title gradient-text"><i class="fas fa-magic" style="margin-right:12px;"></i>Generate Report</h1>
+    </div>
+
+    <form method="post" action="{% url 'reports:generate' %}">
+        {% csrf_token %}
+        <div class="glass-card" style="padding:28px;max-width:700px;">
+            <div style="margin-bottom:20px;">
+                <label class="form-label">Report Title</label>
+                <input type="text" name="title" class="form-input" placeholder="My Analysis Report" required value="Dataset Analysis Report">
+            </div>
+
+            <div style="margin-bottom:20px;">
+                <label class="form-label">Select Dataset</label>
+                <select name="dataset_id" class="form-input" required>
+                    <option value="">— Choose a dataset —</option>
+                    {% for ds in datasets %}
+                    <option value="{{ ds.pk }}">{{ ds.name }} ({{ ds.num_rows }} rows, {{ ds.file_type|upper }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="margin-bottom:20px;">
+                <label class="form-label">Report Type</label>
+                <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;">
+                    <label style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:rgba(255,255,255,0.04);border:1px solid var(--card-border);border-radius:10px;cursor:pointer;color:var(--text-secondary);font-size:14px;transition:all 0.2s;">
+                        <input type="radio" name="report_type" value="dataset_summary" checked style="accent-color:var(--accent-purple);"> Dataset Summary
+                    </label>
+                    <label style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:rgba(255,255,255,0.04);border:1px solid var(--card-border);border-radius:10px;cursor:pointer;color:var(--text-secondary);font-size:14px;transition:all 0.2s;">
+                        <input type="radio" name="report_type" value="full_analysis" style="accent-color:var(--accent-purple);"> Full Analysis
+                    </label>
+                    <label style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:rgba(255,255,255,0.04);border:1px solid var(--card-border);border-radius:10px;cursor:pointer;color:var(--text-secondary);font-size:14px;transition:all 0.2s;">
+                        <input type="radio" name="report_type" value="ml_report" style="accent-color:var(--accent-purple);"> ML Report
+                    </label>
+                    <label style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:rgba(255,255,255,0.04);border:1px solid var(--card-border);border-radius:10px;cursor:pointer;color:var(--text-secondary);font-size:14px;transition:all 0.2s;">
+                        <input type="radio" name="report_type" value="custom" style="accent-color:var(--accent-purple);"> Custom
+                    </label>
+                </div>
+            </div>
+
+            <div style="margin-bottom:24px;">
+                <label class="form-label">Sections to Include</label>
+                <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px;">
+                    <label style="display:flex;align-items:center;gap:10px;color:var(--text-secondary);font-size:14px;cursor:pointer;">
+                        <input type="checkbox" name="sections" value="overview" checked style="accent-color:var(--accent-purple);width:18px;height:18px;">
+                        <i class="fas fa-info-circle" style="color:var(--accent-cyan);"></i> Dataset Overview
+                    </label>
+                    <label style="display:flex;align-items:center;gap:10px;color:var(--text-secondary);font-size:14px;cursor:pointer;">
+                        <input type="checkbox" name="sections" value="columns" checked style="accent-color:var(--accent-purple);width:18px;height:18px;">
+                        <i class="fas fa-columns" style="color:var(--accent-green);"></i> Column Analysis
+                    </label>
+                    <label style="display:flex;align-items:center;gap:10px;color:var(--text-secondary);font-size:14px;cursor:pointer;">
+                        <input type="checkbox" name="sections" value="quality" checked style="accent-color:var(--accent-purple);width:18px;height:18px;">
+                        <i class="fas fa-check-circle" style="color:var(--accent-orange);"></i> Data Quality Assessment
+                    </label>
+                    <label style="display:flex;align-items:center;gap:10px;color:var(--text-secondary);font-size:14px;cursor:pointer;">
+                        <input type="checkbox" name="sections" value="statistics" checked style="accent-color:var(--accent-purple);width:18px;height:18px;">
+                        <i class="fas fa-calculator" style="color:var(--accent-purple);"></i> Statistical Summary
+                    </label>
+                    <label style="display:flex;align-items:center;gap:10px;color:var(--text-secondary);font-size:14px;cursor:pointer;">
+                        <input type="checkbox" name="sections" value="ml_results" style="accent-color:var(--accent-purple);width:18px;height:18px;">
+                        <i class="fas fa-robot" style="color:var(--accent-pink);"></i> ML Model Results
+                    </label>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-glow" style="width:100%;padding:14px;font-size:16px;">
+                <i class="fas fa-file-pdf" style="margin-right:8px;"></i>Generate PDF Report
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

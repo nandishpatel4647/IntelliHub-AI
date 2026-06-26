@@ -1,0 +1,405 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ dataset.name }} — IntelliHub AI{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ── Back link ── */
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        margin-bottom: 20px;
+        transition: color 0.2s;
+    }
+    .back-link:hover { color: var(--text-primary); }
+
+    /* ── Detail header ── */
+    .detail-header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin-bottom: 32px;
+    }
+    .detail-header h1 {
+        font-size: 2rem;
+    }
+    .detail-header-fav {
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: var(--text-muted);
+        padding: 4px;
+        transition: color 0.2s, transform 0.2s;
+    }
+    .detail-header-fav:hover { color: var(--warning); transform: scale(1.2); }
+    .detail-header-fav.active { color: var(--warning); }
+
+    /* ── Metric cards ── */
+    .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 16px;
+        margin-bottom: 32px;
+    }
+    .metric-card {
+        text-align: center;
+        padding: 20px 16px;
+    }
+    .metric-card-icon {
+        width: 40px;
+        height: 40px;
+        margin: 0 auto 10px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .metric-card-value {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 4px;
+    }
+    .metric-card-label {
+        font-size: 0.78rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    /* ── Preview section ── */
+    .section-heading {
+        font-size: 1.15rem;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .section-heading i { color: var(--accent-cyan); }
+
+    .preview-wrapper {
+        overflow-x: auto;
+        margin-bottom: 32px;
+    }
+
+    /* Override pandas-generated table to use intel-table */
+    .preview-wrapper table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.8rem;
+    }
+    .preview-wrapper table thead th {
+        background: var(--tertiary-bg);
+        color: var(--accent-cyan);
+        font-family: 'Space Grotesk', sans-serif;
+        font-weight: 600;
+        padding: 12px 16px;
+        text-align: left;
+        border-bottom: 2px solid var(--border-color);
+        white-space: nowrap;
+    }
+    .preview-wrapper table tbody td {
+        padding: 10px 16px;
+        border-bottom: 1px solid var(--border-color);
+        color: var(--text-secondary);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.78rem;
+    }
+    .preview-wrapper table tbody tr:hover td {
+        background: rgba(124, 58, 237, 0.05);
+        color: var(--text-primary);
+    }
+
+    /* ── Column stats ── */
+    .stats-table-wrapper {
+        overflow-x: auto;
+        margin-bottom: 32px;
+    }
+
+    /* ── Action bar ── */
+    .action-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        padding-top: 8px;
+    }
+
+    /* ── Delete confirm modal ── */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.6);
+        z-index: 9999;
+        align-items: center;
+        justify-content: center;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal-box {
+        background: var(--secondary-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 32px;
+        max-width: 440px;
+        width: 90%;
+        text-align: center;
+    }
+    .modal-box h3 { margin-bottom: 12px; }
+    .modal-box p { color: var(--text-secondary); margin-bottom: 24px; font-size: 0.9rem; }
+    .modal-actions { display: flex; gap: 12px; justify-content: center; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Back -->
+<a href="{% url 'datasets:list' %}" class="back-link">
+    <i data-lucide="arrow-left" style="width:16px;height:16px;"></i>
+    Back to Datasets
+</a>
+
+<!-- Header -->
+<div class="detail-header">
+    <h1 class="gradient-text">{{ dataset.name }}</h1>
+    {% if dataset.file_type == 'csv' %}
+        <span class="badge badge-info">CSV</span>
+    {% elif dataset.file_type == 'excel' %}
+        <span class="badge badge-success">Excel</span>
+    {% elif dataset.file_type == 'json' %}
+        <span class="badge badge-warning">JSON</span>
+    {% endif %}
+    <button type="button"
+            class="detail-header-fav {% if dataset.is_favorite %}active{% endif %}"
+            id="favBtn"
+            title="Toggle favourite"
+            onclick="toggleFavDetail({{ dataset.pk }})">
+        {% if dataset.is_favorite %}
+            <i data-lucide="star" style="width:22px;height:22px;fill:currentColor;"></i>
+        {% else %}
+            <i data-lucide="star" style="width:22px;height:22px;"></i>
+        {% endif %}
+    </button>
+</div>
+
+{% if dataset.description %}
+<p class="text-secondary mb-3" style="max-width:700px;">{{ dataset.description }}</p>
+{% endif %}
+
+<!-- Metric Cards -->
+<div class="metric-grid">
+    <div class="glass-card metric-card">
+        <div class="metric-card-icon" style="background:rgba(6,182,212,.12);color:var(--accent-cyan);">
+            <i data-lucide="rows-3" style="width:20px;height:20px;"></i>
+        </div>
+        <div class="metric-card-value">{{ dataset.num_rows|default:"0" }}</div>
+        <div class="metric-card-label">Rows</div>
+    </div>
+
+    <div class="glass-card metric-card">
+        <div class="metric-card-icon" style="background:rgba(124,58,237,.12);color:var(--accent-purple);">
+            <i data-lucide="columns-3" style="width:20px;height:20px;"></i>
+        </div>
+        <div class="metric-card-value">{{ dataset.num_columns|default:"0" }}</div>
+        <div class="metric-card-label">Columns</div>
+    </div>
+
+    <div class="glass-card metric-card">
+        <div class="metric-card-icon" style="background:{% if dataset.quality_score >= 80 %}rgba(16,185,129,.12){% elif dataset.quality_score >= 50 %}rgba(245,158,11,.12){% else %}rgba(239,68,68,.12){% endif %};color:{% if dataset.quality_score >= 80 %}var(--success){% elif dataset.quality_score >= 50 %}var(--warning){% else %}var(--error){% endif %};">
+            <i data-lucide="gauge" style="width:20px;height:20px;"></i>
+        </div>
+        <div class="metric-card-value" style="color:{% if dataset.quality_score >= 80 %}var(--success){% elif dataset.quality_score >= 50 %}var(--warning){% else %}var(--error){% endif %}">{{ dataset.quality_score }}%</div>
+        <div class="metric-card-label">Quality Score</div>
+    </div>
+
+    <div class="glass-card metric-card">
+        <div class="metric-card-icon" style="background:rgba(6,182,212,.12);color:var(--accent-cyan);">
+            <i data-lucide="hard-drive" style="width:20px;height:20px;"></i>
+        </div>
+        <div class="metric-card-value">{{ dataset.memory_usage }}</div>
+        <div class="metric-card-label">Memory (MB)</div>
+    </div>
+
+    <div class="glass-card metric-card">
+        <div class="metric-card-icon" style="background:rgba(245,158,11,.12);color:var(--warning);">
+            <i data-lucide="copy" style="width:20px;height:20px;"></i>
+        </div>
+        <div class="metric-card-value">{{ dataset.duplicate_rows|default:"0" }}</div>
+        <div class="metric-card-label">Duplicates</div>
+    </div>
+
+    <div class="glass-card metric-card">
+        <div class="metric-card-icon" style="background:rgba(239,68,68,.12);color:var(--error);">
+            <i data-lucide="alert-circle" style="width:20px;height:20px;"></i>
+        </div>
+        <div class="metric-card-value">{{ total_missing|default:"0" }}</div>
+        <div class="metric-card-label">Missing Values</div>
+    </div>
+</div>
+
+<!-- Data Preview -->
+{% if preview_html %}
+<div class="glass-card mb-3">
+    <h2 class="section-heading">
+        <i data-lucide="table" style="width:20px;height:20px;"></i>
+        Data Preview
+        <span class="text-muted" style="font-size:0.8rem;font-weight:400;margin-left:auto;">First 10 rows</span>
+    </h2>
+    <div class="preview-wrapper">
+        {{ preview_html|safe }}
+    </div>
+</div>
+{% endif %}
+
+<!-- Column Analysis -->
+{% if column_stats %}
+<div class="glass-card mb-3">
+    <h2 class="section-heading">
+        <i data-lucide="bar-chart-3" style="width:20px;height:20px;"></i>
+        Column Analysis
+    </h2>
+    <div class="stats-table-wrapper">
+        <table class="intel-table">
+            <thead>
+                <tr>
+                    <th>Column</th>
+                    <th>Type</th>
+                    <th>Missing</th>
+                    <th>Missing %</th>
+                    <th>Unique</th>
+                    <th>Mean</th>
+                    <th>Std</th>
+                    <th>Min</th>
+                    <th>Max</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for col in column_stats %}
+                <tr>
+                    <td style="color:var(--text-primary);font-weight:500;">{{ col.name }}</td>
+                    <td><span class="badge badge-purple" style="font-size:0.7rem;">{{ col.dtype }}</span></td>
+                    <td>{{ col.missing }}</td>
+                    <td>
+                        {% if col.missing_pct > 0 %}
+                            <span style="color:{% if col.missing_pct > 20 %}var(--error){% elif col.missing_pct > 5 %}var(--warning){% else %}var(--text-secondary){% endif %}">
+                                {{ col.missing_pct }}%
+                            </span>
+                        {% else %}
+                            <span style="color:var(--success);">0%</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ col.unique }}</td>
+                    <td>{% if col.mean is not None and col.mean != '' %}{{ col.mean }}{% else %}—{% endif %}</td>
+                    <td>{% if col.std is not None and col.std != '' %}{{ col.std }}{% else %}—{% endif %}</td>
+                    <td>{% if col.min is not None and col.min != '' %}{{ col.min }}{% else %}—{% endif %}</td>
+                    <td>{% if col.max is not None and col.max != '' %}{{ col.max }}{% else %}—{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Action Bar -->
+<div class="glass-card">
+    <h2 class="section-heading">
+        <i data-lucide="zap" style="width:20px;height:20px;"></i>
+        Actions
+    </h2>
+    <div class="action-bar">
+        <a href="{% url 'cleaning:list' %}" class="btn-glow">
+            <i data-lucide="sparkles" style="width:18px;height:18px;"></i>
+            Clean Data
+        </a>
+        <a href="{% url 'eda:list' %}" class="btn-glow" style="background:linear-gradient(135deg, #06B6D4, #0891B2);">
+            <i data-lucide="bar-chart-3" style="width:18px;height:18px;"></i>
+            Analyze (EDA)
+        </a>
+        <a href="{% url 'ml_studio:list' %}" class="btn-glow" style="background:linear-gradient(135deg, #10B981, #059669);">
+            <i data-lucide="brain" style="width:18px;height:18px;"></i>
+            Train Model
+        </a>
+        <button type="button" class="btn-glow btn-danger" onclick="showDeleteModal()">
+            <i data-lucide="trash-2" style="width:18px;height:18px;"></i>
+            Delete Dataset
+        </button>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal-overlay" id="deleteModal">
+    <div class="modal-box">
+        <h3 style="color:var(--error);">Delete Dataset?</h3>
+        <p>This will permanently remove <strong>{{ dataset.name }}</strong> and all its data.
+           This action cannot be undone.</p>
+        <div class="modal-actions">
+            <button type="button" class="btn-glow btn-outline" onclick="hideDeleteModal()">Cancel</button>
+            <form method="post" action="{% url 'datasets:delete' pk=dataset.pk %}" style="margin:0;">
+                {% csrf_token %}
+                <button type="submit" class="btn-glow btn-danger">
+                    <i data-lucide="trash-2" style="width:16px;height:16px;"></i>
+                    Yes, Delete
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* ── Favourite toggle ── */
+function toggleFavDetail(pk) {
+    fetch('/datasets/' + pk + '/favorite/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+        if (data.success) {
+            var btn = document.getElementById('favBtn');
+            btn.classList.toggle('active', data.is_favorite);
+            if (data.is_favorite) {
+                btn.innerHTML = '<i data-lucide="star" style="width:22px;height:22px;fill:currentColor;"></i>';
+            } else {
+                btn.innerHTML = '<i data-lucide="star" style="width:22px;height:22px;"></i>';
+            }
+            if (typeof lucide !== 'undefined') { lucide.createIcons(); }
+        }
+    })
+    .catch(function(err) { console.error('Favourite toggle failed:', err); });
+}
+
+/* ── Delete modal ── */
+function showDeleteModal() {
+    document.getElementById('deleteModal').classList.add('show');
+}
+function hideDeleteModal() {
+    document.getElementById('deleteModal').classList.remove('show');
+}
+// Close on overlay click
+document.getElementById('deleteModal').addEventListener('click', function(e) {
+    if (e.target === this) hideDeleteModal();
+});
+// Close on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') hideDeleteModal();
+});
+
+/* ── CSRF cookie helper ── */
+function getCookie(name) {
+    var value = '; ' + document.cookie;
+    var parts = value.split('; ' + name + '=');
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return '';
+}
+</script>
+{% endblock %}

@@ -1,0 +1,509 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}AI Data Cleaning — IntelliHub AI{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header { margin-bottom: 28px; }
+    .page-header h1 { font-size: 2rem; }
+    .page-header p { color: var(--text-secondary); margin-top: 6px; font-size: 0.9rem; }
+
+    /* ── Dataset Selector ── */
+    .selector-card { padding: 28px; margin-bottom: 24px; }
+    .selector-row {
+        display: flex;
+        align-items: flex-end;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+    .selector-row .field { flex: 1; min-width: 260px; }
+
+    /* ── Metrics ── */
+    .cleaning-metrics {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+    .cm-card {
+        padding: 20px;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+    }
+    .cm-icon {
+        width: 40px; height: 40px;
+        border-radius: 10px;
+        display: flex; align-items: center; justify-content: center;
+        margin: 0 auto 10px;
+        font-size: 18px;
+    }
+    .cm-value {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+    .cm-label {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-top: 4px;
+        font-weight: 600;
+    }
+
+    /* ── Recommendations ── */
+    .reco-card { padding: 24px; margin-bottom: 24px; }
+    .reco-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+    .reco-header h2 {
+        font-size: 1.1rem;
+        display: flex; align-items: center; gap: 8px;
+    }
+    .reco-header h2 i { color: var(--accent-cyan); }
+    .table-wrapper { overflow-x: auto; }
+
+    .severity-high { background: rgba(239,68,68,0.15); color: #EF4444; }
+    .severity-medium { background: rgba(245,158,11,0.15); color: var(--accent-orange); }
+    .severity-low { background: rgba(16,185,129,0.15); color: var(--accent-green); }
+
+    .btn-apply {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 6px 14px;
+        background: rgba(124,58,237,0.15);
+        color: var(--accent-purple);
+        border: 1px solid rgba(124,58,237,0.3);
+        border-radius: 8px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-family: 'Inter', sans-serif;
+    }
+    .btn-apply:hover {
+        background: var(--accent-purple);
+        color: #fff;
+    }
+
+    /* ── Results / Before-After ── */
+    .results-card { padding: 24px; margin-bottom: 24px; }
+    .compare-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+    .compare-box {
+        padding: 20px;
+        border-radius: 12px;
+        border: 1px solid var(--card-border);
+        background: rgba(255,255,255,0.02);
+    }
+    .compare-box h4 {
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--text-muted);
+        margin-bottom: 12px;
+    }
+    .compare-stat {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.04);
+        font-size: 0.88rem;
+    }
+    .compare-stat:last-child { border-bottom: none; }
+    .compare-stat span:first-child { color: var(--text-secondary); }
+    .compare-stat span:last-child { font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+
+    /* ── Spinner ── */
+    .inline-spinner {
+        display: inline-block;
+        width: 16px; height: 16px;
+        border: 2px solid rgba(255,255,255,0.15);
+        border-top-color: var(--accent-purple);
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+        vertical-align: middle;
+        margin-right: 6px;
+    }
+
+    /* ── Loading Section ── */
+    .loading-section {
+        text-align: center;
+        padding: 48px 16px;
+        color: var(--text-muted);
+    }
+    .loading-section .spinner {
+        width: 36px; height: 36px;
+        margin: 0 auto 12px;
+    }
+
+    /* ── Hidden ── */
+    .hidden { display: none !important; }
+
+    @media (max-width: 768px) {
+        .compare-grid { grid-template-columns: 1fr; }
+        .cleaning-metrics { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 480px) {
+        .cleaning-metrics { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="page-header">
+    <h1 class="gradient-text">AI Data Cleaning</h1>
+    <p>Detect and fix data quality issues with intelligent recommendations.</p>
+</div>
+
+<!-- Dataset Selector -->
+<div class="glass-card selector-card">
+    <div class="selector-row">
+        <div class="field">
+            <label class="form-label" for="datasetSelect">
+                <i class="fas fa-database"></i> Select Dataset
+            </label>
+            <select id="datasetSelect" class="form-select">
+                <option value="">— Choose a dataset —</option>
+                {% for ds in datasets %}
+                <option value="{{ ds.pk }}" {% if selected_pk == ds.pk %}selected{% endif %}>
+                    {{ ds.name }} ({{ ds.num_rows }} rows × {{ ds.num_columns }} cols)
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <button class="btn-glow" id="analyzeBtn" disabled>
+            <i class="fas fa-search"></i> Analyze
+        </button>
+    </div>
+</div>
+
+<!-- Empty State (shown when no datasets) -->
+{% if not datasets %}
+<div class="glass-card empty-state">
+    <i class="fas fa-broom"></i>
+    <h3>No Datasets Available</h3>
+    <p>Upload a dataset first to start cleaning and improving your data quality.</p>
+    <a href="{% url 'datasets:upload' %}" class="btn-glow">
+        <i class="fas fa-cloud-upload-alt"></i> Upload Dataset
+    </a>
+</div>
+{% endif %}
+
+<!-- Metrics Section (hidden initially) -->
+<div id="metricsSection" class="hidden">
+    <div class="cleaning-metrics">
+        <div class="glass-card cm-card">
+            <div class="cm-icon" style="background:rgba(6,182,212,0.12);color:var(--accent-cyan);">
+                <i class="fas fa-table"></i>
+            </div>
+            <div class="cm-value" id="metricRows">0</div>
+            <div class="cm-label">Total Rows</div>
+        </div>
+        <div class="glass-card cm-card">
+            <div class="cm-icon" style="background:rgba(239,68,68,0.12);color:#EF4444;">
+                <i class="fas fa-exclamation-circle"></i>
+            </div>
+            <div class="cm-value" id="metricMissing">0</div>
+            <div class="cm-label">Missing Values</div>
+        </div>
+        <div class="glass-card cm-card">
+            <div class="cm-icon" style="background:rgba(245,158,11,0.12);color:var(--accent-orange);">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <div class="cm-value" id="metricOutliers">0</div>
+            <div class="cm-label">Outliers</div>
+        </div>
+        <div class="glass-card cm-card">
+            <div class="cm-icon" style="background:rgba(124,58,237,0.12);color:var(--accent-purple);">
+                <i class="fas fa-copy"></i>
+            </div>
+            <div class="cm-value" id="metricDuplicates">0</div>
+            <div class="cm-label">Duplicates</div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading indicator -->
+<div id="loadingRecommendations" class="hidden">
+    <div class="glass-card loading-section">
+        <div class="spinner"></div>
+        <p>Analyzing data quality issues…</p>
+    </div>
+</div>
+
+<!-- Recommendations Table -->
+<div id="recommendationsSection" class="hidden">
+    <div class="glass-card reco-card">
+        <div class="reco-header">
+            <h2><i class="fas fa-lightbulb"></i> Cleaning Recommendations</h2>
+            <button class="btn-glow" id="autoCleanBtn">
+                <i class="fas fa-magic"></i> Auto-Clean All
+            </button>
+        </div>
+        <div class="table-wrapper">
+            <table class="intel-table" id="recoTable">
+                <thead>
+                    <tr>
+                        <th>Column</th>
+                        <th>Issue</th>
+                        <th>Count</th>
+                        <th>%</th>
+                        <th>Severity</th>
+                        <th>Recommendation</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="recoTableBody">
+                    <!-- Populated by JS -->
+                </tbody>
+            </table>
+        </div>
+        <!-- Empty recommendations -->
+        <div id="recoEmpty" class="hidden" style="text-align:center;padding:32px;color:var(--text-muted);">
+            <i class="fas fa-check-circle" style="font-size:32px;color:var(--accent-green);display:block;margin-bottom:12px;"></i>
+            <p>No issues found! Your dataset is clean.</p>
+        </div>
+    </div>
+</div>
+
+<!-- Results Section (Before/After) -->
+<div id="resultsSection" class="hidden">
+    <div class="glass-card results-card">
+        <h2 class="section-title" style="margin-bottom:20px;">
+            <i class="fas fa-exchange-alt" style="color:var(--accent-cyan);"></i> Before vs After Cleaning
+        </h2>
+        <div class="compare-grid">
+            <div class="compare-box">
+                <h4><i class="fas fa-arrow-left" style="color:#EF4444;margin-right:6px;"></i> Before</h4>
+                <div id="beforeStats"></div>
+            </div>
+            <div class="compare-box">
+                <h4><i class="fas fa-arrow-right" style="color:var(--accent-green);margin-right:6px;"></i> After</h4>
+                <div id="afterStats"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var datasetSelect = document.getElementById('datasetSelect');
+    var analyzeBtn = document.getElementById('analyzeBtn');
+    var metricsSection = document.getElementById('metricsSection');
+    var loadingSection = document.getElementById('loadingRecommendations');
+    var recoSection = document.getElementById('recommendationsSection');
+    var recoTableBody = document.getElementById('recoTableBody');
+    var recoEmpty = document.getElementById('recoEmpty');
+    var resultsSection = document.getElementById('resultsSection');
+    var autoCleanBtn = document.getElementById('autoCleanBtn');
+    var currentPk = null;
+
+    function getCookie(name) {
+        var value = '; ' + document.cookie;
+        var parts = value.split('; ' + name + '=');
+        if (parts.length === 2) return parts.pop().split(';').shift();
+        return '';
+    }
+
+    datasetSelect.addEventListener('change', function() {
+        analyzeBtn.disabled = !this.value;
+        metricsSection.classList.add('hidden');
+        recoSection.classList.add('hidden');
+        resultsSection.classList.add('hidden');
+    });
+
+    analyzeBtn.addEventListener('click', function() {
+        currentPk = datasetSelect.value;
+        if (!currentPk) return;
+        loadRecommendations(currentPk);
+    });
+
+    function loadRecommendations(pk) {
+        metricsSection.classList.add('hidden');
+        recoSection.classList.add('hidden');
+        resultsSection.classList.add('hidden');
+        loadingSection.classList.remove('hidden');
+
+        fetch('/cleaning/' + pk + '/recommendations/', {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            loadingSection.classList.add('hidden');
+
+            /* Update metrics */
+            document.getElementById('metricRows').textContent = (data.total_rows || 0).toLocaleString();
+            document.getElementById('metricMissing').textContent = (data.total_missing || 0).toLocaleString();
+            document.getElementById('metricOutliers').textContent = (data.total_outliers || 0).toLocaleString();
+            document.getElementById('metricDuplicates').textContent = (data.duplicate_rows || 0).toLocaleString();
+            metricsSection.classList.remove('hidden');
+
+            /* Build recommendations table */
+            recoTableBody.innerHTML = '';
+            var items = data.recommendations || [];
+            if (items.length === 0) {
+                recoEmpty.classList.remove('hidden');
+                recoSection.classList.remove('hidden');
+                return;
+            }
+            recoEmpty.classList.add('hidden');
+            items.forEach(function(r) {
+                var severityClass = 'severity-low';
+                if (r.severity === 'high') severityClass = 'severity-high';
+                else if (r.severity === 'medium') severityClass = 'severity-medium';
+                var pct = r.percentage !== undefined ? parseFloat(r.percentage).toFixed(1) + '%' : '—';
+                var tr = document.createElement('tr');
+                tr.innerHTML =
+                    '<td style="font-weight:500;font-family:JetBrains Mono,monospace;font-size:0.85rem;">' + escHtml(r.column) + '</td>' +
+                    '<td>' + escHtml(r.issue) + '</td>' +
+                    '<td style="font-family:JetBrains Mono,monospace;">' + (r.count || 0) + '</td>' +
+                    '<td style="font-family:JetBrains Mono,monospace;">' + pct + '</td>' +
+                    '<td><span class="badge-info ' + severityClass + '" style="display:inline-block;border-radius:20px;padding:4px 12px;font-size:12px;font-weight:600;">' + escHtml(r.severity || 'low') + '</span></td>' +
+                    '<td style="color:var(--text-secondary);max-width:220px;">' + escHtml(r.recommendation) + '</td>' +
+                    '<td><button class="btn-apply" data-column="' + escHtml(r.column) + '" data-action="' + escHtml(r.action || 'fix') + '"><i class="fas fa-wrench"></i> Apply</button></td>';
+                recoTableBody.appendChild(tr);
+            });
+            recoSection.classList.remove('hidden');
+
+            /* Bind apply buttons */
+            var applyBtns = recoTableBody.querySelectorAll('.btn-apply');
+            applyBtns.forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var col = btn.getAttribute('data-column');
+                    var action = btn.getAttribute('data-action');
+                    applyFix(pk, col, action, btn);
+                });
+            });
+        })
+        .catch(function(err) {
+            loadingSection.classList.add('hidden');
+            console.error('Failed to load recommendations:', err);
+            showToast('Failed to analyze dataset. Please try again.', 'error');
+        });
+    }
+
+    function applyFix(pk, column, action, btn) {
+        btn.innerHTML = '<span class="inline-spinner"></span> Applying…';
+        btn.disabled = true;
+        fetch('/cleaning/' + pk + '/manual-clean/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({ column: column, action: action })
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            if (data.success) {
+                btn.innerHTML = '<i class="fas fa-check"></i> Applied';
+                btn.style.background = 'rgba(16,185,129,0.15)';
+                btn.style.color = 'var(--accent-green)';
+                btn.style.borderColor = 'rgba(16,185,129,0.3)';
+                showToast('Fix applied to column: ' + column, 'success');
+                setTimeout(function() { loadRecommendations(pk); }, 1000);
+            } else {
+                btn.innerHTML = '<i class="fas fa-wrench"></i> Apply';
+                btn.disabled = false;
+                showToast(data.error || 'Fix failed.', 'error');
+            }
+        })
+        .catch(function(err) {
+            btn.innerHTML = '<i class="fas fa-wrench"></i> Apply';
+            btn.disabled = false;
+            showToast('Request failed.', 'error');
+        });
+    }
+
+    autoCleanBtn.addEventListener('click', function() {
+        if (!currentPk) return;
+        autoCleanBtn.innerHTML = '<span class="inline-spinner"></span> Cleaning…';
+        autoCleanBtn.disabled = true;
+
+        fetch('/cleaning/' + currentPk + '/auto-clean/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            autoCleanBtn.innerHTML = '<i class="fas fa-magic"></i> Auto-Clean All';
+            autoCleanBtn.disabled = false;
+            if (data.success) {
+                showToast('Auto-clean completed!', 'success');
+                /* Show before/after */
+                showCompare(data.before || {}, data.after || {});
+                loadRecommendations(currentPk);
+            } else {
+                showToast(data.error || 'Auto-clean failed.', 'error');
+            }
+        })
+        .catch(function(err) {
+            autoCleanBtn.innerHTML = '<i class="fas fa-magic"></i> Auto-Clean All';
+            autoCleanBtn.disabled = false;
+            showToast('Request failed.', 'error');
+        });
+    });
+
+    function showCompare(before, after) {
+        var statsKeys = ['Total Rows', 'Missing Values', 'Outliers', 'Duplicates', 'Quality Score'];
+        var beforeVals = [before.total_rows, before.missing, before.outliers, before.duplicates, before.quality_score];
+        var afterVals = [after.total_rows, after.missing, after.outliers, after.duplicates, after.quality_score];
+        var beforeHtml = '', afterHtml = '';
+        for (var i = 0; i < statsKeys.length; i++) {
+            beforeHtml += '<div class="compare-stat"><span>' + statsKeys[i] + '</span><span>' + (beforeVals[i] !== undefined ? beforeVals[i] : '—') + '</span></div>';
+            afterHtml += '<div class="compare-stat"><span>' + statsKeys[i] + '</span><span style="color:var(--accent-green);">' + (afterVals[i] !== undefined ? afterVals[i] : '—') + '</span></div>';
+        }
+        document.getElementById('beforeStats').innerHTML = beforeHtml;
+        document.getElementById('afterStats').innerHTML = afterHtml;
+        resultsSection.classList.remove('hidden');
+    }
+
+    function escHtml(str) {
+        if (!str) return '';
+        var d = document.createElement('div');
+        d.appendChild(document.createTextNode(str));
+        return d.innerHTML;
+    }
+
+    function showToast(msg, type) {
+        var container = document.getElementById('toastContainer');
+        if (!container) return;
+        var icons = { success: 'fa-check-circle', error: 'fa-times-circle', warning: 'fa-exclamation-triangle', info: 'fa-info-circle' };
+        var toast = document.createElement('div');
+        toast.className = 'toast toast-' + (type || 'info');
+        toast.innerHTML = '<i class="fas ' + (icons[type] || icons.info) + ' toast-icon"></i>' +
+            '<span>' + msg + '</span>' +
+            '<button class="toast-close" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>';
+        container.appendChild(toast);
+        setTimeout(function() { if (toast.parentElement) toast.remove(); }, 5000);
+    }
+
+    /* Auto-analyze if a dataset is pre-selected */
+    if (datasetSelect.value) {
+        analyzeBtn.disabled = false;
+        analyzeBtn.click();
+    }
+});
+</script>
+{% endblock %}

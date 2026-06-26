@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}AI Reports — IntelliHub AI{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <div class="page-header">
+        <h1 class="page-title gradient-text"><i class="fas fa-file-pdf" style="margin-right:12px;"></i>AI Reports</h1>
+        <a href="{% url 'reports:generate' %}" class="btn-glow" style="padding:12px 24px;">
+            <i class="fas fa-plus" style="margin-right:6px;"></i>Generate New Report
+        </a>
+    </div>
+
+    {% if reports %}
+    <div class="glass-card" style="padding:28px;">
+        <table class="intel-table">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Dataset</th>
+                    <th>Type</th>
+                    <th>Size</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for report in reports %}
+                <tr>
+                    <td style="font-weight:500;color:var(--text-primary);">
+                        <i class="fas fa-file-pdf" style="color:var(--accent-purple);margin-right:8px;"></i>{{ report.title }}
+                    </td>
+                    <td>{{ report.dataset.name|default:"—" }}</td>
+                    <td>
+                        {% if report.report_type == 'dataset_summary' %}<span class="badge-info">Dataset Summary</span>
+                        {% elif report.report_type == 'full_analysis' %}<span class="badge-success">Full Analysis</span>
+                        {% elif report.report_type == 'ml_report' %}<span class="badge-warning">ML Report</span>
+                        {% else %}<span class="badge-info">Custom</span>{% endif %}
+                    </td>
+                    <td style="color:var(--text-secondary);">{{ report.file_size|filesizeformat }}</td>
+                    <td style="color:var(--text-secondary);font-size:13px;">{{ report.created_at|date:"M d, Y" }}</td>
+                    <td>
+                        <div style="display:flex;gap:8px;">
+                            <a href="{% url 'reports:download' report.pk %}" class="btn-glow-outline" style="padding:6px 12px;font-size:12px;">
+                                <i class="fas fa-download"></i> Download
+                            </a>
+                            <form method="post" action="{% url 'reports:delete' report.pk %}" style="margin:0;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn-danger" style="padding:6px 12px;font-size:12px;" onclick="return confirm('Delete this report?')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% if reports.has_other_pages %}
+        <div style="display:flex;justify-content:center;gap:8px;margin-top:20px;">
+            {% if reports.has_previous %}
+            <a href="?page={{ reports.previous_page_number }}" class="btn-glow-outline" style="padding:6px 14px;font-size:13px;">Previous</a>
+            {% endif %}
+            <span style="padding:6px 14px;color:var(--text-secondary);font-size:13px;">Page {{ reports.number }} of {{ reports.paginator.num_pages }}</span>
+            {% if reports.has_next %}
+            <a href="?page={{ reports.next_page_number }}" class="btn-glow-outline" style="padding:6px 14px;font-size:13px;">Next</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+    {% else %}
+    <div class="glass-card" style="padding:60px;text-align:center;">
+        <div style="font-size:48px;margin-bottom:12px;opacity:0.3;">📄</div>
+        <h3 style="color:var(--text-primary);margin-bottom:8px;">No reports yet</h3>
+        <p style="color:var(--text-secondary);margin-bottom:20px;">Generate a PDF analysis report from your datasets.</p>
+        <a href="{% url 'reports:generate' %}" class="btn-glow" style="padding:12px 24px;">Generate First Report</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

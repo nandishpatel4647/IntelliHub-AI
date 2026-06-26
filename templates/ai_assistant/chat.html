@@ -1,0 +1,242 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}AI Assistant — IntelliHub AI{% endblock %}
+
+{% block content %}
+<div style="display:flex;gap:0;height:calc(100vh - 64px);margin:-32px;">
+
+    <!-- Chat Sidebar -->
+    <div style="width:280px;min-width:280px;background:var(--secondary-bg);border-right:1px solid var(--card-border);display:flex;flex-direction:column;padding:20px 0;">
+        <div style="padding:0 16px 20px;">
+            <h2 class="gradient-text" style="font-family:'Space Grotesk',sans-serif;font-size:20px;margin-bottom:16px;">
+                <i class="fas fa-robot" style="margin-right:8px;"></i>AI Assistant
+            </h2>
+            <form method="post" action="{% url 'ai_assistant:new_session' %}">
+                {% csrf_token %}
+                <button type="submit" class="btn-glow" style="width:100%;padding:10px;font-size:14px;">
+                    <i class="fas fa-plus" style="margin-right:6px;"></i>New Chat
+                </button>
+            </form>
+        </div>
+
+        <!-- Dataset Selector -->
+        <div style="padding:0 16px 16px;">
+            <label style="display:block;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Chat about a dataset</label>
+            <select id="datasetSelector" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--card-border);border-radius:8px;padding:8px 12px;color:var(--text-primary);font-size:13px;">
+                <option value="">No dataset selected</option>
+                {% for ds in datasets %}
+                <option value="{{ ds.pk }}">{{ ds.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Session List -->
+        <div style="flex:1;overflow-y:auto;padding:0 8px;">
+            {% for session in sessions %}
+            <a href="{% url 'ai_assistant:session' session.pk %}"
+               style="display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:4px;border-radius:8px;color:var(--text-secondary);text-decoration:none;font-size:13px;transition:all 0.2s;{% if session.pk == current_session.pk %}background:rgba(124,58,237,0.15);color:var(--text-primary);border-left:3px solid var(--accent-purple);{% endif %}"
+               onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='{% if session.pk == current_session.pk %}rgba(124,58,237,0.15){% else %}transparent{% endif %}'">
+                <i class="fas fa-comment-dots" style="opacity:0.5;"></i>
+                <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ session.title }}</span>
+                {% if session.pk == current_session.pk %}
+                <form method="post" action="{% url 'ai_assistant:delete_session' session.pk %}" style="margin:0;" onclick="event.stopPropagation();">
+                    {% csrf_token %}
+                    <button type="submit" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:12px;padding:2px;" title="Delete">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </form>
+                {% endif %}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Chat Main Area -->
+    <div style="flex:1;display:flex;flex-direction:column;background:transparent;">
+
+        <!-- Messages Container -->
+        <div id="chatMessages" style="flex:1;overflow-y:auto;padding:32px;display:flex;flex-direction:column;gap:16px;">
+
+            {% if not chat_messages %}
+            <!-- Empty State with Quick Prompts -->
+            <div id="emptyState" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;">
+                <div style="font-size:64px;margin-bottom:16px;opacity:0.3;">🤖</div>
+                <h3 style="color:var(--text-primary);font-family:'Space Grotesk',sans-serif;font-size:22px;margin-bottom:8px;">How can I help you today?</h3>
+                <p style="color:var(--text-secondary);margin-bottom:32px;max-width:400px;">Ask me about your datasets, ML models, cleaning strategies, or visualizations.</p>
+                <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;max-width:600px;">
+                    <button class="quick-prompt" onclick="sendQuickPrompt(this)" style="background:rgba(255,255,255,0.04);border:1px solid var(--card-border);border-radius:20px;padding:8px 16px;color:var(--text-secondary);cursor:pointer;font-size:13px;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--accent-purple)';this.style.color='var(--text-primary)'" onmouseout="this.style.borderColor='var(--card-border)';this.style.color='var(--text-secondary)'">
+                        📊 Analyze my dataset
+                    </button>
+                    <button class="quick-prompt" onclick="sendQuickPrompt(this)" style="background:rgba(255,255,255,0.04);border:1px solid var(--card-border);border-radius:20px;padding:8px 16px;color:var(--text-secondary);cursor:pointer;font-size:13px;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--accent-purple)';this.style.color='var(--text-primary)'" onmouseout="this.style.borderColor='var(--card-border)';this.style.color='var(--text-secondary)'">
+                        🤖 Recommend ML algorithm
+                    </button>
+                    <button class="quick-prompt" onclick="sendQuickPrompt(this)" style="background:rgba(255,255,255,0.04);border:1px solid var(--card-border);border-radius:20px;padding:8px 16px;color:var(--text-secondary);cursor:pointer;font-size:13px;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--accent-purple)';this.style.color='var(--text-primary)'" onmouseout="this.style.borderColor='var(--card-border)';this.style.color='var(--text-secondary)'">
+                        🧹 Help me clean data
+                    </button>
+                    <button class="quick-prompt" onclick="sendQuickPrompt(this)" style="background:rgba(255,255,255,0.04);border:1px solid var(--card-border);border-radius:20px;padding:8px 16px;color:var(--text-secondary);cursor:pointer;font-size:13px;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--accent-purple)';this.style.color='var(--text-primary)'" onmouseout="this.style.borderColor='var(--card-border)';this.style.color='var(--text-secondary)'">
+                        📈 What charts should I use?
+                    </button>
+                    <button class="quick-prompt" onclick="sendQuickPrompt(this)" style="background:rgba(255,255,255,0.04);border:1px solid var(--card-border);border-radius:20px;padding:8px 16px;color:var(--text-secondary);cursor:pointer;font-size:13px;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--accent-purple)';this.style.color='var(--text-primary)'" onmouseout="this.style.borderColor='var(--card-border)';this.style.color='var(--text-secondary)'">
+                        📐 Show me statistics
+                    </button>
+                    <button class="quick-prompt" onclick="sendQuickPrompt(this)" style="background:rgba(255,255,255,0.04);border:1px solid var(--card-border);border-radius:20px;padding:8px 16px;color:var(--text-secondary);cursor:pointer;font-size:13px;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--accent-purple)';this.style.color='var(--text-primary)'" onmouseout="this.style.borderColor='var(--card-border)';this.style.color='var(--text-secondary)'">
+                        🚀 What can IntelliHub do?
+                    </button>
+                </div>
+            </div>
+            {% else %}
+            <!-- Existing Messages -->
+            {% for msg in chat_messages %}
+            <div style="display:flex;{% if msg.role == 'user' %}justify-content:flex-end;{% else %}justify-content:flex-start;{% endif %}">
+                <div style="max-width:70%;padding:14px 18px;border-radius:16px;font-size:14px;line-height:1.6;{% if msg.role == 'user' %}background:linear-gradient(135deg,rgba(124,58,237,0.25),rgba(37,99,235,0.2));border:1px solid rgba(124,58,237,0.3);color:var(--text-primary);border-bottom-right-radius:4px;{% else %}background:rgba(255,255,255,0.04);border:1px solid var(--card-border);color:var(--text-primary);border-bottom-left-radius:4px;{% endif %}">
+                    {% if msg.role == 'assistant' %}
+                    <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;font-size:12px;color:var(--accent-purple);">
+                        <i class="fas fa-robot"></i> IntelliHub AI
+                    </div>
+                    {% endif %}
+                    <div class="msg-content">{{ msg.content|linebreaksbr }}</div>
+                </div>
+            </div>
+            {% endfor %}
+            {% endif %}
+
+            <!-- Typing Indicator -->
+            <div id="typingIndicator" style="display:none;justify-content:flex-start;">
+                <div style="background:rgba(255,255,255,0.04);border:1px solid var(--card-border);border-radius:16px;padding:14px 20px;border-bottom-left-radius:4px;">
+                    <div style="display:flex;gap:4px;align-items:center;">
+                        <span class="typing-dot" style="width:8px;height:8px;border-radius:50%;background:var(--accent-purple);animation:typingBounce 1.4s infinite both;animation-delay:0s;"></span>
+                        <span class="typing-dot" style="width:8px;height:8px;border-radius:50%;background:var(--accent-cyan);animation:typingBounce 1.4s infinite both;animation-delay:0.2s;"></span>
+                        <span class="typing-dot" style="width:8px;height:8px;border-radius:50%;background:var(--accent-green);animation:typingBounce 1.4s infinite both;animation-delay:0.4s;"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div style="padding:16px 32px 24px;border-top:1px solid var(--card-border);background:rgba(0,0,0,0.3);">
+            <div style="display:flex;gap:12px;align-items:flex-end;max-width:800px;margin:0 auto;">
+                <textarea id="messageInput" rows="1" placeholder="Type your message..."
+                    style="flex:1;background:rgba(255,255,255,0.05);border:1px solid var(--card-border);border-radius:12px;padding:14px 16px;color:var(--text-primary);font-family:Inter,sans-serif;font-size:14px;resize:none;max-height:120px;transition:border-color 0.2s;outline:none;"
+                    onfocus="this.style.borderColor='var(--accent-purple)'" onblur="this.style.borderColor='var(--card-border)'"></textarea>
+                <button id="sendBtn" onclick="sendMessage()" class="btn-glow" style="padding:14px 20px;border-radius:12px;font-size:14px;white-space:nowrap;">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+@keyframes typingBounce {
+    0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+    40% { transform: scale(1); opacity: 1; }
+}
+@media (max-width: 768px) {
+    div[style*="width:280px"] { display: none; }
+}
+</style>
+
+<script>
+const sessionId = {{ current_session.pk }};
+const csrfToken = '{{ csrf_token }}';
+
+document.getElementById('messageInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+    }
+});
+
+// Auto-expand textarea
+document.getElementById('messageInput').addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+});
+
+function sendQuickPrompt(btn) {
+    document.getElementById('messageInput').value = btn.textContent.trim();
+    sendMessage();
+}
+
+function sendMessage() {
+    const input = document.getElementById('messageInput');
+    const message = input.value.trim();
+    if (!message) return;
+
+    const datasetId = document.getElementById('datasetSelector').value || null;
+
+    // Hide empty state
+    const empty = document.getElementById('emptyState');
+    if (empty) empty.style.display = 'none';
+
+    // Append user message
+    appendMessage('user', message);
+    input.value = '';
+    input.style.height = 'auto';
+
+    // Show typing
+    document.getElementById('typingIndicator').style.display = 'flex';
+    scrollToBottom();
+
+    fetch('{% url "ai_assistant:send_message" %}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+        body: JSON.stringify({ session_id: sessionId, message: message, dataset_id: datasetId })
+    })
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('typingIndicator').style.display = 'none';
+        if (data.response) {
+            appendMessage('assistant', data.response);
+        } else if (data.error) {
+            appendMessage('assistant', '⚠️ Error: ' + data.error);
+        }
+    })
+    .catch(err => {
+        document.getElementById('typingIndicator').style.display = 'none';
+        appendMessage('assistant', '⚠️ Connection error. Please try again.');
+    });
+}
+
+function appendMessage(role, content) {
+    const container = document.getElementById('chatMessages');
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'display:flex;' + (role === 'user' ? 'justify-content:flex-end;' : 'justify-content:flex-start;');
+    wrapper.style.animation = 'fadeIn 0.3s ease';
+
+    const bubble = document.createElement('div');
+    bubble.style.cssText = 'max-width:70%;padding:14px 18px;border-radius:16px;font-size:14px;line-height:1.6;';
+    if (role === 'user') {
+        bubble.style.cssText += 'background:linear-gradient(135deg,rgba(124,58,237,0.25),rgba(37,99,235,0.2));border:1px solid rgba(124,58,237,0.3);color:var(--text-primary);border-bottom-right-radius:4px;';
+    } else {
+        bubble.style.cssText += 'background:rgba(255,255,255,0.04);border:1px solid var(--card-border);color:var(--text-primary);border-bottom-left-radius:4px;';
+        bubble.innerHTML = '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;font-size:12px;color:var(--accent-purple);"><i class="fas fa-robot"></i> IntelliHub AI</div>';
+    }
+
+    const contentDiv = document.createElement('div');
+    contentDiv.innerHTML = formatMessage(content);
+    bubble.appendChild(contentDiv);
+    wrapper.appendChild(bubble);
+
+    const typing = document.getElementById('typingIndicator');
+    container.insertBefore(wrapper, typing);
+    scrollToBottom();
+}
+
+function formatMessage(text) {
+    return text
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/`(.*?)`/g, '<code style="background:rgba(124,58,237,0.2);padding:2px 6px;border-radius:4px;font-size:13px;">$1</code>')
+        .replace(/^- (.+)/gm, '<div style="padding-left:12px;">• $1</div>')
+        .replace(/\n/g, '<br>');
+}
+
+function scrollToBottom() {
+    const c = document.getElementById('chatMessages');
+    setTimeout(() => { c.scrollTop = c.scrollHeight; }, 50);
+}
+
+scrollToBottom();
+</script>
+{% endblock %}

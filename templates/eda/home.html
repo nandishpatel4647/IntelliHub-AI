@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}EDA Studio — IntelliHub AI{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header { margin-bottom: 28px; }
+    .page-header h1 { font-size: 2rem; }
+    .page-header p { color: var(--text-secondary); margin-top: 6px; font-size: 0.9rem; }
+
+    .eda-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 20px;
+    }
+    .eda-ds-card {
+        padding: 24px;
+        cursor: pointer;
+        transition: transform 0.2s, border-color 0.3s;
+    }
+    .eda-ds-card:hover { transform: translateY(-4px); }
+    .eda-ds-card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 14px;
+    }
+    .eda-ds-name {
+        font-size: 1.05rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        word-break: break-word;
+    }
+    .eda-ds-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        margin-bottom: 14px;
+    }
+    .eda-ds-meta span {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    .eda-quality-bar {
+        height: 5px;
+        background: rgba(255,255,255,0.06);
+        border-radius: 3px;
+        overflow: hidden;
+    }
+    .eda-quality-fill {
+        height: 100%;
+        border-radius: 3px;
+        transition: width 0.6s ease;
+    }
+    .eda-quality-label {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.73rem;
+        color: var(--text-muted);
+        margin-bottom: 5px;
+    }
+    .eda-ds-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 16px;
+    }
+    .eda-ds-footer .explore-link {
+        color: var(--accent-cyan);
+        font-size: 0.82rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .eda-ds-footer .date {
+        color: var(--text-muted);
+        font-size: 0.75rem;
+    }
+
+    @media (max-width: 480px) {
+        .eda-grid { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="gradient-text">EDA Studio</h1>
+    <p>Select a dataset to explore with interactive charts, statistics, and AI-powered insights.</p>
+</div>
+
+{% if datasets %}
+<div class="eda-grid">
+    {% for ds in datasets %}
+    <div class="glass-card eda-ds-card" onclick="window.location='{% url 'eda:dashboard' dataset_pk=ds.pk %}'">
+        <div class="eda-ds-card-header">
+            <span class="eda-ds-name">{{ ds.name }}</span>
+            {% if ds.file_type == 'csv' %}
+                <span class="badge-info">CSV</span>
+            {% elif ds.file_type == 'excel' %}
+                <span class="badge-success">Excel</span>
+            {% elif ds.file_type == 'json' %}
+                <span class="badge-warning">JSON</span>
+            {% else %}
+                <span class="badge-info">{{ ds.file_type|upper }}</span>
+            {% endif %}
+        </div>
+        <div class="eda-ds-meta">
+            <span><i class="fas fa-table"></i> {{ ds.num_rows|default:"0" }} rows</span>
+            <span><i class="fas fa-columns"></i> {{ ds.num_columns|default:"0" }} cols</span>
+            <span><i class="fas fa-hdd"></i> {{ ds.memory_usage|default:"0" }} MB</span>
+        </div>
+        <div class="eda-quality-label">
+            <span>Data Quality</span>
+            <span>{{ ds.quality_score|default:"0" }}%</span>
+        </div>
+        <div class="eda-quality-bar">
+            <div class="eda-quality-fill" style="width:{{ ds.quality_score|default:'0' }}%;
+                background:{% if ds.quality_score >= 80 %}var(--accent-green){% elif ds.quality_score >= 50 %}var(--accent-orange){% else %}#EF4444{% endif %};"></div>
+        </div>
+        <div class="eda-ds-footer">
+            <span class="date"><i class="fas fa-calendar-alt"></i> {{ ds.created_at|date:"M d, Y" }}</span>
+            <span class="explore-link">Explore <i class="fas fa-arrow-right"></i></span>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="glass-card empty-state">
+    <i class="fas fa-chart-bar"></i>
+    <h3>No Datasets Available</h3>
+    <p>Upload a dataset to start exploring your data with interactive visualizations.</p>
+    <a href="{% url 'datasets:upload' %}" class="btn-glow">
+        <i class="fas fa-cloud-upload-alt"></i> Upload Dataset
+    </a>
+</div>
+{% endif %}
+{% endblock %}
