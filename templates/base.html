@@ -20,76 +20,104 @@
     <!-- SIDEBAR NAVIGATION -->
     {% if user.is_authenticated %}
     <nav class="sidebar" id="sidebar">
+        <!-- Animated top glow line -->
+        <div class="sidebar-glow-line"></div>
+
         <div class="sidebar-logo">
-            <span class="gradient-text">IntelliHub</span> AI
+            <div class="logo-icon-wrap">
+                <i class="fas fa-atom logo-icon-spin"></i>
+            </div>
+            <span class="gradient-text">IntelliHub</span> <span class="logo-ai">AI</span>
         </div>
 
-        <div class="sidebar-section-title">MAIN</div>
-        <a href="{% url 'dashboard:home' %}" class="sidebar-nav-item {% if request.resolver_match.app_name == 'dashboard' %}active{% endif %}">
-            <span class="nav-icon"><i class="fas fa-th-large"></i></span> Dashboard
-        </a>
-        <a href="{% url 'datasets:list' %}" class="sidebar-nav-item {% if request.resolver_match.app_name == 'datasets' %}active{% endif %}">
-            <span class="nav-icon"><i class="fas fa-database"></i></span> Datasets
-        </a>
-
-        <div class="sidebar-section-title">ANALYSIS</div>
-        <a href="{% url 'cleaning:home' %}" class="sidebar-nav-item {% if request.resolver_match.app_name == 'cleaning' %}active{% endif %}">
-            <span class="nav-icon"><i class="fas fa-broom"></i></span> Data Cleaning
-        </a>
-        <a href="{% url 'eda:home' %}" class="sidebar-nav-item {% if request.resolver_match.app_name == 'eda' %}active{% endif %}">
-            <span class="nav-icon"><i class="fas fa-chart-bar"></i></span> EDA Studio
-        </a>
-
-        <div class="sidebar-section-title">AI & ML</div>
-        <a href="{% url 'ml_studio:home' %}" class="sidebar-nav-item {% if request.resolver_match.app_name == 'ml_studio' %}active{% endif %}">
-            <span class="nav-icon"><i class="fas fa-robot"></i></span> ML Studio
-        </a>
-        <a href="{% url 'dl_studio:home' %}" class="sidebar-nav-item {% if request.resolver_match.app_name == 'dl_studio' %}active{% endif %}">
-            <span class="nav-icon"><i class="fas fa-brain"></i></span> Deep Learning
-        </a>
-        <a href="{% url 'ai_assistant:home' %}" class="sidebar-nav-item {% if request.resolver_match.app_name == 'ai_assistant' %}active{% endif %}">
-            <span class="nav-icon"><i class="fas fa-comments"></i></span> AI Assistant
-        </a>
-
-        <div class="sidebar-section-title">TOOLS</div>
-        <a href="{% url 'scraper:home' %}" class="sidebar-nav-item {% if request.resolver_match.app_name == 'scraper' %}active{% endif %}">
-            <span class="nav-icon"><i class="fas fa-spider"></i></span> Web Scraper
-        </a>
-        <a href="{% url 'api_center:docs' %}" class="sidebar-nav-item {% if request.resolver_match.app_name == 'api_center' %}active{% endif %}">
-            <span class="nav-icon"><i class="fas fa-code"></i></span> API Center
-        </a>
-        <a href="{% url 'reports:list' %}" class="sidebar-nav-item {% if request.resolver_match.app_name == 'reports' %}active{% endif %}">
-            <span class="nav-icon"><i class="fas fa-file-pdf"></i></span> Reports
-        </a>
-
-        {% if user.role == 'admin' %}
-        <div class="sidebar-section-title">ADMIN</div>
-        <a href="{% url 'admin_panel:dashboard' %}" class="sidebar-nav-item {% if request.resolver_match.app_name == 'admin_panel' %}active{% endif %}">
-            <span class="nav-icon"><i class="fas fa-shield-alt"></i></span> Admin Panel
-        </a>
-        {% endif %}
-
-        <!-- Bottom: User profile -->
-        <div style="position:absolute; bottom:0; left:0; right:0; padding:16px 24px; border-top:1px solid var(--card-border);">
-            <a href="{% url 'accounts:profile' %}" class="sidebar-nav-item" style="margin:0; border-radius:10px;">
-                <span class="nav-icon">
-                    {% if user.profile_photo %}
-                    <img src="{{ user.profile_photo.url }}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">
-                    {% else %}
-                    <i class="fas fa-user-circle"></i>
-                    {% endif %}
-                </span>
-                <div>
-                    <div style="font-size:13px;color:var(--text-primary);">{{ user.get_full_name|default:user.username }}</div>
-                    <div style="font-size:11px;color:var(--text-muted);text-transform:capitalize;">{{ user.role|default:'Student' }}</div>
-                </div>
+        <!-- Scrollable nav area -->
+        <div class="sidebar-nav-scroll">
+            <div class="sidebar-section-title">MAIN</div>
+            <a href="{% url 'dashboard:home' %}" class="sidebar-nav-item {% if request.resolver_match.app_name == 'dashboard' %}active{% endif %}">
+                <span class="nav-icon"><i class="fas fa-th-large"></i></span>
+                <span class="nav-label">Dashboard</span>
             </a>
-            <a href="{% url 'accounts:logout' %}" class="sidebar-nav-item" style="margin:0; margin-top:4px; border-radius:10px; color:var(--text-muted);">
-                <span class="nav-icon"><i class="fas fa-sign-out-alt"></i></span> Logout
+            <a href="{% url 'datasets:list' %}" class="sidebar-nav-item {% if request.resolver_match.app_name == 'datasets' %}active{% endif %}">
+                <span class="nav-icon"><i class="fas fa-database"></i></span>
+                <span class="nav-label">Datasets</span>
+            </a>
+
+            <div class="sidebar-section-title">ANALYSIS</div>
+            <a href="{% url 'cleaning:home' %}" class="sidebar-nav-item {% if request.resolver_match.app_name == 'cleaning' %}active{% endif %}">
+                <span class="nav-icon"><i class="fas fa-broom"></i></span>
+                <span class="nav-label">Data Cleaning</span>
+            </a>
+            <a href="{% url 'eda:home' %}" class="sidebar-nav-item {% if request.resolver_match.app_name == 'eda' %}active{% endif %}">
+                <span class="nav-icon"><i class="fas fa-chart-bar"></i></span>
+                <span class="nav-label">EDA Studio</span>
+            </a>
+
+            <div class="sidebar-section-title">AI & ML</div>
+            <a href="{% url 'ml_studio:home' %}" class="sidebar-nav-item {% if request.resolver_match.app_name == 'ml_studio' %}active{% endif %}">
+                <span class="nav-icon"><i class="fas fa-robot"></i></span>
+                <span class="nav-label">ML Studio</span>
+            </a>
+            <a href="{% url 'dl_studio:home' %}" class="sidebar-nav-item {% if request.resolver_match.app_name == 'dl_studio' %}active{% endif %}">
+                <span class="nav-icon"><i class="fas fa-brain"></i></span>
+                <span class="nav-label">Deep Learning</span>
+            </a>
+            <a href="{% url 'ai_assistant:home' %}" class="sidebar-nav-item {% if request.resolver_match.app_name == 'ai_assistant' %}active{% endif %}">
+                <span class="nav-icon"><i class="fas fa-comments"></i></span>
+                <span class="nav-label">AI Assistant</span>
+            </a>
+
+            <div class="sidebar-section-title">TOOLS</div>
+            <a href="{% url 'scraper:home' %}" class="sidebar-nav-item {% if request.resolver_match.app_name == 'scraper' %}active{% endif %}">
+                <span class="nav-icon"><i class="fas fa-spider"></i></span>
+                <span class="nav-label">Web Scraper</span>
+            </a>
+            <a href="{% url 'api_center:docs' %}" class="sidebar-nav-item {% if request.resolver_match.app_name == 'api_center' %}active{% endif %}">
+                <span class="nav-icon"><i class="fas fa-code"></i></span>
+                <span class="nav-label">API Center</span>
+            </a>
+            <a href="{% url 'reports:list' %}" class="sidebar-nav-item {% if request.resolver_match.app_name == 'reports' %}active{% endif %}">
+                <span class="nav-icon"><i class="fas fa-file-pdf"></i></span>
+                <span class="nav-label">Reports</span>
+            </a>
+
+            {% if user.role == 'admin' %}
+            <div class="sidebar-section-title">ADMIN</div>
+            <a href="{% url 'admin_panel:dashboard' %}" class="sidebar-nav-item {% if request.resolver_match.app_name == 'admin_panel' %}active{% endif %}">
+                <span class="nav-icon"><i class="fas fa-shield-alt"></i></span>
+                <span class="nav-label">Admin Panel</span>
+            </a>
+            {% endif %}
+        </div>
+
+        <!-- Bottom: User profile (non-overlapping, flex-pushed to bottom) -->
+        <div class="sidebar-user-panel">
+            <a href="{% url 'accounts:profile' %}" class="sidebar-user-card">
+                <div class="sidebar-user-avatar">
+                    {% if user.profile_photo %}
+                    <img src="{{ user.profile_photo.url }}" alt="avatar">
+                    {% else %}
+                    <span>{{ user.username|make_list|first|upper }}</span>
+                    {% endif %}
+                </div>
+                <div class="sidebar-user-info">
+                    <div class="sidebar-user-name">{{ user.get_full_name|default:user.username }}</div>
+                    <div class="sidebar-user-role">{{ user.role|default:'Student' }}</div>
+                </div>
+                <i class="fas fa-ellipsis-v sidebar-user-more"></i>
+            </a>
+            <a href="{% url 'accounts:logout' %}" class="sidebar-logout-btn">
+                <i class="fas fa-sign-out-alt"></i> Logout
             </a>
         </div>
     </nav>
     {% endif %}
+
+    <!-- Floating Background Orbs -->
+    <div class="bg-orbs" aria-hidden="true">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
 
     <!-- MAIN CONTENT AREA -->
     {% if user.is_authenticated %}
@@ -114,7 +142,9 @@
 
     <!-- Loading overlay -->
     <div class="loading-overlay" id="loadingOverlay" style="display:none;">
-        <div class="spinner"></div>
+        <div class="loader-ring">
+            <div></div><div></div><div></div><div></div>
+        </div>
     </div>
     {% endblock %}
 

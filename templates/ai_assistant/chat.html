@@ -23,7 +23,7 @@
         <!-- Dataset Selector -->
         <div style="padding:0 16px 16px;">
             <label style="display:block;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Chat about a dataset</label>
-            <select id="datasetSelector" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--card-border);border-radius:8px;padding:8px 12px;color:var(--text-primary);font-size:13px;">
+            <select id="datasetSelector" class="form-input" style="padding:10px 12px;font-size:13px;border-radius:10px;">
                 <option value="">No dataset selected</option>
                 {% for ds in datasets %}
                 <option value="{{ ds.pk }}">{{ ds.name }}</option>
