@@ -172,10 +172,10 @@
 
 {% if not tf_available %}
 <div class="tf-warning">
-    <i class="fas fa-exclamation-triangle"></i>
+    <i class="fas fa-info-circle"></i>
     <div>
-        <strong>TensorFlow Not Available</strong> — Deep learning features require TensorFlow.
-        Install it with: <code style="background:rgba(0,0,0,0.3);padding:2px 8px;border-radius:4px;font-size:0.82rem;">pip install tensorflow</code>
+        <strong>Deep Learning — Simulation Mode</strong> — TensorFlow is not installed on this server.
+        Neural network training will use sklearn MLPClassifier/MLPRegressor as a fallback.
     </div>
 </div>
 {% endif %}
@@ -296,7 +296,7 @@
             </div>
         </div>
 
-        <button type="submit" class="btn-glow" id="dlTrainBtn" style="margin-top:12px;"{% if not tf_available %} disabled title="TensorFlow required"{% endif %}>
+        <button type="submit" class="btn-glow" id="dlTrainBtn" style="margin-top:12px;">
             <i class="fas fa-play"></i> Start Training
         </button>
     </form>

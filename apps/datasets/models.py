@@ -7,6 +7,7 @@ and version history tracking.
 
 from django.conf import settings
 from django.db import models
+import json
 
 
 class Dataset(models.Model):
@@ -104,6 +105,11 @@ class Dataset(models.Model):
     def __str__(self):
         """Return a human-readable label: 'dataset_name (username)'."""
         return f"{self.name} ({self.user.username})"
+
+    @property
+    def column_names_json(self):
+        """Return column_names as a JSON string for use in JavaScript."""
+        return json.dumps(self.column_names if self.column_names else [])
 
 
 class DatasetVersion(models.Model):

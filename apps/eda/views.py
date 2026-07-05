@@ -66,12 +66,15 @@ def eda_dashboard(request, dataset_pk):
 
         context = {
             'dataset': dataset,
+            'columns': list(df.columns),
             'numeric_cols': numeric_cols,
             'categorical_cols': categorical_cols,
             'all_cols': list(df.columns),
             'describe_html': describe_html,
             'num_numeric': len(numeric_cols),
             'num_categorical': len(categorical_cols),
+            'num_columns': len(df.columns),
+            'num_rows': len(df),
         }
         return render(request, 'eda/dashboard.html', context)
     except Exception as e:
